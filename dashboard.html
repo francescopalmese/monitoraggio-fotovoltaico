@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fotovoltaico di casa</title>
+<style>
+  /* Colori come variabili: una definizione per tema, il resto della pagina usa i ruoli.
+     Palette di riferimento validata (contrasto e daltonismo) per i grafici. */
+  :root {
+    color-scheme: light;
+    --pagina: #f9f9f7;  --superficie: #fcfcfb;
+    --testo: #0b0b0b;   --testo-2: #52514e;  --muted: #898781;
+    --griglia: #e1e0d9; --asse: #c3c2b7;     --bordo: rgba(11,11,11,.10);
+    --s1: #2a78d6;  /* fotovoltaico */   --s2: #eb6834;  /* casa (carico) */
+    --s3: #1baf7a;  /* batteria */       --s4: #eda100;  /* rete */
+    --grigio: #898781;                   /* serie di contesto (attesa PVGIS) */
+    --s3-traccia: #d2f0e4;
+    --ok: #0ca30c; --attenzione: #fab219; --serio: #ec835a; --critico: #d03b3b; --ok-testo: #006300;
+    --tooltip: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --pagina: #0d0d0d;  --superficie: #1a1a19;
+      --testo: #f0efec;   --testo-2: #c3c2b7;  --muted: #898781;
+      --griglia: #2c2c2a; --asse: #383835;     --bordo: rgba(255,255,255,.10);
+      --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+      --s3-traccia: #143d2e; --ok-testo: #0ca30c; --tooltip: #252523;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--pagina); color: var(--testo);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1240px; margin: 0 auto; padding: 20px 16px 40px; }
+  h1 { font-size: 22px; margin: 0 0 2px; font-weight: 650; }
+  h2 { font-size: 14px; margin: 0 0 2px; font-weight: 600; }
+  .muted { color: var(--muted); } .testo-2 { color: var(--testo-2); }
+  .sotto { font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+  a { color: inherit; }
+
+  /* avvisi: icona + testo, mai solo colore */
+  .avvisi { display: grid; gap: 8px; margin: 12px 0; }
+  .avviso { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 8px;
+    background: var(--superficie); border: 1px solid var(--bordo); border-left: 4px solid var(--muted); }
+  .avviso.critico { border-left-color: var(--critico); }
+  .avviso.attenzione { border-left-color: var(--attenzione); }
+  .avviso.info { border-left-color: var(--asse); }
+  .avviso .icona { font-size: 16px; line-height: 1.2; }
+  .avviso strong { display: block; font-size: 13px; }
+  .avviso span.testo { font-size: 13px; color: var(--testo-2); }
+
+  /* filtri: una riga sopra tutto quello che governano */
+  .filtri { display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: center; margin: 14px 0 16px; font-size: 13px; }
+  .filtri .gruppo { display: flex; gap: 6px; align-items: center; }
+  .filtri .gruppo span { color: var(--muted); margin-right: 4px; }
+  .preset { background: var(--superficie); color: var(--testo-2); border: 1px solid var(--bordo);
+    border-radius: 6px; padding: 4px 10px; font: inherit; cursor: pointer; }
+  .preset:hover { background: color-mix(in srgb, var(--testo) 5%, var(--superficie)); }
+  .preset[aria-pressed="true"] { color: var(--testo); border-color: var(--testo-2); font-weight: 600; }
+
+  /* tessere con i numeri del giorno */
+  .kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(138px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .tessera { background: var(--superficie); border: 1px solid var(--bordo); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+  .tessera .etichetta { font-size: 12px; color: var(--testo-2); }
+  .tessera .valore { font-size: 24px; font-weight: 600; margin: 2px 0 0; line-height: 1.2; }
+  .tessera .valore small { font-size: 13px; font-weight: 500; color: var(--testo-2); margin-left: 5px; }
+  .tessera .delta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .tessera .delta.su { color: var(--ok-testo); }
+  .tessera.eroe { grid-column: span 2; }
+  .tessera.eroe .valore { font-size: 48px; }
+  @media (max-width: 480px) { .tessera.eroe { grid-column: span 1; } .tessera.eroe .valore { font-size: 36px; } }
+
+  /* schede dei grafici */
+  .griglia { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr)); gap: 12px; margin-bottom: 12px; }
+  .scheda { background: var(--superficie); border: 1px solid var(--bordo); border-radius: 10px; padding: 14px 14px 10px; min-width: 0; }
+  .scheda .grafico { position: relative; height: 260px; margin-top: 8px; }
+  .scheda.alta .grafico { height: 300px; }
+  body.aggiornando .grafico, body.aggiornando .kpi { opacity: .6; }   /* ricarica senza salti */
+  details { margin-top: 8px; font-size: 12px; }
+  summary { cursor: pointer; color: var(--muted); user-select: none; }
+  .tabella { overflow-x: auto; margin-top: 6px; }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  th, td { text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--griglia); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--muted); font-weight: 500; }
+
+  /* batteria */
+  .batt { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px 14px; margin-top: 8px; }
+  .batt .etichetta { font-size: 12px; color: var(--testo-2); }
+  .batt .valore { font-size: 18px; font-weight: 600; }
+  .misuratore { height: 8px; border-radius: 4px; background: var(--s3-traccia); overflow: hidden; margin: 6px 0 2px; }
+  .misuratore > div { height: 100%; background: var(--s3); border-radius: 4px; }
+  .misuratore.bassa > div { background: var(--attenzione); }
+
+  footer { font-size: 12px; color: var(--muted); margin-top: 18px; line-height: 1.6; }
+  .errore { background: var(--superficie); border: 1px solid var(--critico); border-radius: 8px; padding: 12px; margin: 12px 0; }
+</style>
+<link rel="icon" href="data:,">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Fotovoltaico di casa</h1>
+    <p class="sotto" id="sottotitolo">Caricamento dei dati…</p>
+  </header>
+
+  <section class="avvisi" id="avvisi" aria-live="polite"></section>
+
+  <section class="filtri" aria-label="Intervalli">
+    <div class="gruppo" id="preset-ore"><span>Potenza, ultime ore</span></div>
+    <div class="gruppo" id="preset-giorni"><span>Giorni mostrati</span></div>
+  </section>
+
+  <section class="kpi" id="kpi" aria-label="Numeri di oggi"></section>
+
+  <section class="scheda alta">
+    <h2 id="titolo-potenza">Potenza nelle ultime ore</h2>
+    <div class="sotto">Fotovoltaico, casa, batteria (positivo = in carica) e rete (positivo = immissione, negativo = prelievo), in kW</div>
+    <div class="grafico"><canvas id="g-potenza"></canvas></div>
+    <details><summary>Tabella</summary><div class="tabella" id="t-potenza"></div></details>
+  </section>
+
+  <section class="griglia">
+    <section class="scheda">
+      <h2>Produzione per giorno</h2>
+      <div class="sotto">Energia prodotta divisa tra autoconsumata (anche in batteria) e immessa in rete; la linea grigia è l'attesa PVGIS</div>
+      <div class="grafico"><canvas id="g-giorni"></canvas></div>
+      <details><summary>Tabella dei giorni</summary><div class="tabella" id="t-giorni"></div></details>
+    </section>
+    <section class="scheda">
+      <h2>Consumo per giorno</h2>
+      <div class="sotto">Consumo di casa diviso tra coperto da fotovoltaico e batteria e prelevato dalla rete</div>
+      <div class="grafico"><canvas id="g-consumo"></canvas></div>
+      <details><summary>Tabella</summary><div class="tabella" id="t-consumo"></div></details>
+    </section>
+  </section>
+
+  <section class="griglia">
+    <section class="scheda">
+      <h2>Produzione per mese</h2>
+      <div class="sotto">Somma dei giorni con dati; il punto grigio è l'attesa PVGIS per quegli stessi giorni</div>
+      <div class="grafico"><canvas id="g-mesi"></canvas></div>
+      <details><summary>Tabella dei mesi</summary><div class="tabella" id="t-mesi"></div></details>
+    </section>
+    <section class="scheda">
+      <h2>Batteria</h2>
+      <div class="sotto" id="batt-sotto">Stato dall'ultima lettura</div>
+      <div class="batt" id="batt"></div>
+      <div class="grafico" style="height:170px"><canvas id="g-soc"></canvas></div>
+      <details><summary>Tabella</summary><div class="tabella" id="t-soc"></div></details>
+    </section>
+  </section>
+
+  <footer id="piede"></footer>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const css = (nome) => getComputedStyle(document.documentElement).getPropertyValue(nome).trim();
+  const MESI = ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"];
+  const stato = { ore: 12, giorni: 31, dati: null, grafici: {}, timer: null };
+
+  // ---------- formattazione (italiano) ----------
+  const num = (v, dec = 1) => (v == null || Number.isNaN(v)) ? "–"
+    : Number(v).toLocaleString("it-IT", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  const kwh = (v, dec = 1) => v == null ? "–" : num(v, dec) + " kWh";
+  const kw = (w) => w == null ? "–" : num(w / 1000, 2) + " kW";
+  const pct = (v) => v == null ? "–" : num(v, 0) + " %";
+  const ggmm = (iso) => iso.slice(8, 10) + "/" + iso.slice(5, 7);
+  const meseTesto = (iso) => MESI[Number(iso.slice(5, 7)) - 1] + " " + iso.slice(0, 4);
+  const alfa = (hex, a) => {
+    const n = parseInt(hex.slice(1), 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+  };
+
+  // ---------- costruzione DOM senza innerHTML (i testi arrivano dall'API) ----------
+  function el(tag, attrs = {}, ...figli) {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "class") e.className = v; else if (k === "text") e.textContent = v; else e.setAttribute(k, v);
+    }
+    for (const f of figli) if (f != null) e.append(f);
+    return e;
+  }
+  function svuota(nodo) { while (nodo.firstChild) nodo.removeChild(nodo.firstChild); return nodo; }
+  function tabella(contenitore, intestazioni, righe) {
+    const t = el("table");
+    t.append(el("thead", {}, el("tr", {}, ...intestazioni.map((h) => el("th", { text: h })))));
+    t.append(el("tbody", {}, ...righe.map((r) => el("tr", {}, ...r.map((c) => el("td", { text: c }))))));
+    svuota(contenitore).append(t);
+  }
+
+  // ---------- filtri ----------
+  function presets(contenitore, valori, chiave, suffisso) {
+    for (const v of valori) {
+      const b = el("button", { class: "preset", type: "button", text: v + suffisso, "aria-pressed": String(stato[chiave] === v) });
+      b.addEventListener("click", () => { stato[chiave] = v; aggiornaPreset(); carica(); });
+      contenitore.append(b);
+    }
+  }
+  function aggiornaPreset() {
+    for (const [id, chiave, suff] of [["preset-ore", "ore", " h"], ["preset-giorni", "giorni", " giorni"]]) {
+      for (const b of $(id).querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.textContent === stato[chiave] + suff));
+    }
+  }
+  presets($("preset-ore"), [3, 6, 12, 24], "ore", " h");
+  presets($("preset-giorni"), [7, 31, 90], "giorni", " giorni");
+
+  // ---------- plugin Chart.js: mirino verticale e etichette di fine linea ----------
+  const mirino = {
+    id: "mirino",
+    afterDraw(chart) {
+      if (!chart.options.mirino) return;
+      const attivi = chart.getActiveElements();
+      if (!attivi.length) return;
+      const { ctx, chartArea: a } = chart;
+      ctx.save(); ctx.strokeStyle = css("--asse"); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(attivi[0].element.x, a.top); ctx.lineTo(attivi[0].element.x, a.bottom); ctx.stroke();
+      ctx.restore();
+    },
+  };
+  const etichetteFinali = {
+    id: "etichetteFinali",
+    afterDatasetsDraw(chart) {
+      if (!chart.options.etichetteFinali) return;
+      const voci = [];
+      chart.data.datasets.forEach((ds, i) => {
+        const meta = chart.getDatasetMeta(i);
+        if (meta.hidden || !meta.data.length) return;
+        let j = ds.data.length - 1;
+        while (j >= 0 && ds.data[j] == null) j--;
+        if (j < 0) return;
+        voci.push({ testo: ds.label, x: meta.data[j].x, y0: meta.data[j].y, y: meta.data[j].y });
+      });
+      voci.sort((p, q) => p.y - q.y);
+      for (let k = 1; k < voci.length; k++) if (voci[k].y - voci[k - 1].y < 14) voci[k].y = voci[k - 1].y + 14;
+      const { ctx } = chart;
+      ctx.save();
+      ctx.font = "600 11px system-ui, -apple-system, 'Segoe UI', sans-serif";
+      ctx.fillStyle = css("--testo-2"); ctx.strokeStyle = css("--asse"); ctx.lineWidth = 1; ctx.textBaseline = "middle";
+      for (const v of voci) {
+        if (Math.abs(v.y - v.y0) > 1) { ctx.beginPath(); ctx.moveTo(v.x + 2, v.y0); ctx.lineTo(v.x + 6, v.y); ctx.stroke(); }
+        ctx.fillText(v.testo, v.x + 8, v.y);
+      }
+      ctx.restore();
+    },
+  };
+  Chart.register(mirino, etichetteFinali);
+
+  // ---------- opzioni comuni dei grafici ----------
+  function opzioni(formatoY, extra = {}) {
+    return {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      interaction: { mode: "index", intersect: false },
+      layout: { padding: { right: extra.etichetteFinali ? 84 : 4, top: 4 } },
+      plugins: {
+        legend: {
+          display: extra.legenda !== false, position: "top", align: "start",
+          labels: { usePointStyle: true, boxWidth: 10, boxHeight: 10, padding: 14, color: css("--testo-2"), font: { size: 12 },
+                    sort: (a, b) => a.datasetIndex - b.datasetIndex },
+        },
+        tooltip: {
+          usePointStyle: true, backgroundColor: css("--tooltip"), titleColor: css("--testo"), bodyColor: css("--testo"),
+          borderColor: css("--bordo"), borderWidth: 1, padding: 10, boxPadding: 4,
+          callbacks: { label: (c) => " " + formatoY(c.parsed.y) + "  " + c.dataset.label },
+        },
+      },
+      scales: {
+        x: { grid: { display: false }, border: { color: css("--asse") },
+             ticks: { color: css("--muted"), maxTicksLimit: 9, maxRotation: 0, autoSkip: true, font: { size: 11 } } },
+        y: { beginAtZero: true, grid: { color: css("--griglia"), lineWidth: 1 }, border: { display: false },
+             ticks: { color: css("--muted"), font: { size: 11 }, maxTicksLimit: 6, callback: (v) => formatoY(v) },
+             ...(extra.y || {}) },
+      },
+      mirino: !!extra.mirino, etichetteFinali: !!extra.etichetteFinali,
+    };
+  }
+  function linea(label, data, colore, extra = {}) {
+    return { type: "line", label, data, borderColor: colore, backgroundColor: extra.area ? alfa(colore, 0.1) : colore,
+      fill: !!extra.area, borderWidth: 2, pointRadius: 0, pointHoverRadius: 5, pointHoverBorderWidth: 2,
+      pointHoverBorderColor: css("--superficie"), pointHoverBackgroundColor: colore, pointStyle: "line",
+      tension: 0.15, spanGaps: true, ...(extra.dataset || {}) };
+  }
+  function barre(label, data, colore, stack, ultimo) {
+    return { type: "bar", label, data, backgroundColor: colore, stack, pointStyle: "rect",
+      borderColor: css("--superficie"), borderWidth: { top: 2, left: 0, right: 0, bottom: 0 }, borderSkipped: false,
+      maxBarThickness: 24,
+      // 4px di raggio solo sulla cima della pila: sul segmento alto, o su quello basso se sopra non c'è niente
+      borderRadius: (ctx) => (ultimo || !ctx.chart.data.datasets.some((d, i) => i > ctx.datasetIndex && d.stack === stack && d.data[ctx.dataIndex] > 0)) ? { topLeft: 4, topRight: 4 } : 0 };
+  }
+  function disegna(id, config) {
+    if (stato.grafici[id]) { stato.grafici[id].destroy(); }
+    stato.grafici[id] = new Chart($(id).getContext("2d"), config);
+  }
+
+  // ---------- rendering ----------
+  function render(d) {
+    const u = d.ultima_lettura;
+    $("sottotitolo").textContent = u
+      ? `Ultima lettura ${u.ora_locale} (${u.minuti_fa} min fa) · inverter: ${u.stato_testo} · produzione totale dall'installazione ${num(u.energia_totale_kwh / 1000, 1)} MWh · la pagina si aggiorna da sola ogni minuto`
+      : "Nessuna lettura nel database";
+
+    // avvisi
+    const av = svuota($("avvisi"));
+    const icone = { critico: "⛔", attenzione: "⚠️", info: "ℹ️" };
+    const titoli = { nessuna_lettura: "Inverter non raggiunto", nessun_dato: "Database vuoto", inverter_guasto: "Guasto inverter", produzione_bassa: "Produzione sotto l'attesa" };
+    for (const a of d.avvisi) {
+      av.append(el("div", { class: "avviso " + a.livello, role: "alert" }, el("span", { class: "icona", text: icone[a.livello] || "•" }),
+        el("div", {}, el("strong", { text: titoli[a.codice] || a.codice }), el("span", { class: "testo", text: a.testo }))));
+    }
+    if (!d.attesa.configurata) {
+      av.append(el("div", { class: "avviso info" }, el("span", { class: "icona", text: icone.info }),
+        el("div", {}, el("strong", { text: "Produzione attesa non disponibile" }), el("span", { class: "testo", text: "PVGIS " + (d.attesa.info.errore || "non configurato") }))));
+    } else if (d.attesa.info.avviso) {
+      av.append(el("div", { class: "avviso info" }, el("span", { class: "icona", text: icone.info }),
+        el("div", {}, el("strong", { text: "PVGIS" }), el("span", { class: "testo", text: d.attesa.info.avviso }))));
+    }
+
+    // tessere di oggi
+    const o = d.oggi || {};
+    const k = svuota($("kpi"));
+    function tessera(etichetta, valore, unita, delta, classe = "") {
+      const t = el("div", { class: "tessera " + classe }, el("div", { class: "etichetta", text: etichetta }),
+        el("div", { class: "valore", text: valore }, unita ? el("small", { text: unita }) : null));
+      if (delta) t.append(el("div", { class: "delta " + (delta.su ? "su" : ""), text: delta.testo }));
+      return t;
+    }
+    let deltaAttesa = null;
+    if (o.attesa != null && o.prodotta != null) {
+      const scarto = 100 * (o.prodotta - o.attesa) / o.attesa;
+      deltaAttesa = { su: scarto >= 0, testo: `attesa PVGIS ${kwh(o.attesa)} (${scarto >= 0 ? "+" : ""}${num(scarto, 0)} %)` };
+    } else {
+      deltaAttesa = { su: false, testo: d.attesa.configurata ? "attesa PVGIS non calcolabile" : "attesa PVGIS: non configurata" };
+    }
+    k.append(tessera("Prodotta oggi", num(o.prodotta), "kWh", deltaAttesa, "eroe"));
+    k.append(tessera("Consumo di casa oggi", num(o.consumata), "kWh", { testo: o.autosufficienza != null ? `${kwh(o.autosufficienza)} senza rete` : "" }));
+    k.append(tessera("Autoconsumo", pct(o.autoconsumo_pct), "", { testo: o.autoconsumo != null ? `${kwh(o.autoconsumo)} non immessi` : "della produzione" }));
+    k.append(tessera("Autosufficienza", pct(o.autosufficienza_pct), "", { testo: "del consumo coperto senza rete" }));
+    k.append(tessera("Immessa in rete oggi", num(o.immessa), "kWh", { testo: `prelevata ${kwh(o.prelevata)}` }));
+    const recente = u && u.minuti_fa <= 10;          // oltre 10 minuti i valori "adesso" sono vecchi
+    const quando = recente ? "adesso" : "all'ultima lettura";
+    k.append(tessera(`Fotovoltaico ${quando}`, u ? num(u.pv_w / 1000, 2) : "–", "kW", { testo: u ? `casa ${kw(u.carico_w)}, rete ${kw(u.rete_w)}` : "" }));
+    k.append(tessera(`Batteria ${quando}`, d.batteria ? num(d.batteria.soc, 0) : "–", "%", { testo: d.batteria ? `${d.batteria.verso} ${kw(Math.abs(d.batteria.potenza_w || 0))}` : "" }));
+
+    // potenza nelle ultime ore
+    $("titolo-potenza").textContent = `Potenza nelle ultime ${d.parametri.ore} ore`;
+    const p = d.potenza;
+    const inKw = (c) => p.map((x) => x[c] == null ? null : x[c] / 1000);
+    disegna("g-potenza", {
+      data: { labels: p.map((x) => x.ora), datasets: [
+        linea("Fotovoltaico", inKw("pv_w"), css("--s1")), linea("Casa", inKw("carico_w"), css("--s2")),
+        linea("Batteria", inKw("batteria_w"), css("--s3")), linea("Rete", inKw("rete_w"), css("--s4")) ] },
+      options: opzioni((v) => num(v, 1) + " kW", { mirino: true, etichetteFinali: true, y: { beginAtZero: false } }),
+    });
+    tabella($("t-potenza"), ["Ora", "Fotovoltaico", "Casa", "Batteria", "Rete", "Batteria %"],
+      p.slice().reverse().map((x) => [x.ora, kw(x.pv_w), kw(x.carico_w), kw(x.batteria_w), kw(x.rete_w), num(x.soc, 0)]));
+
+    // produzione per giorno (pila) + attesa
+    const g = d.giorni;
+    const etichetteG = g.map((x) => ggmm(x.data));
+    const conAttesa = g.some((x) => x.attesa != null);
+    const dsProd = [barre("Autoconsumata", g.map((x) => x.autoconsumo), css("--s1"), "p", false),
+                    barre("Immessa in rete", g.map((x) => x.immessa), css("--s4"), "p", true)];
+    if (conAttesa) dsProd.push(linea("Attesa PVGIS", g.map((x) => x.attesa), css("--grigio"), { dataset: { pointRadius: 0, pointHoverRadius: 5, order: -1 } }));
+    const optG = opzioni((v) => num(v, 0) + " kWh", { mirino: false });
+    optG.scales.x.stacked = true; optG.scales.y.stacked = true;
+    disegna("g-giorni", { data: { labels: etichetteG, datasets: dsProd }, options: optG });
+    tabella($("t-giorni"), ["Giorno", "Prodotta", "Attesa", "Consumo", "Immessa", "Prelevata", "Autocons.", "Autosuff.", "Carica batt.", "Scarica batt.", "Picco FV", "Letture"],
+      g.slice().reverse().map((x) => [ggmm(x.data), kwh(x.prodotta), kwh(x.attesa), kwh(x.consumata), kwh(x.immessa), kwh(x.prelevata),
+        pct(x.autoconsumo_pct), pct(x.autosufficienza_pct), kwh(x.carica_batteria), kwh(x.scarica_batteria), kw(x.picco_pv_w),
+        `${x.n_letture} (${x.prima}–${x.ultima})${x.copertura < 0.9 ? " parziale" : ""}`]));
+
+    // consumo per giorno (pila)
+    const optC = opzioni((v) => num(v, 0) + " kWh");
+    optC.scales.x.stacked = true; optC.scales.y.stacked = true;
+    disegna("g-consumo", { data: { labels: etichetteG, datasets: [
+      barre("Da fotovoltaico e batteria", g.map((x) => x.autosufficienza), css("--s1"), "c", false),
+      barre("Prelevata dalla rete", g.map((x) => x.prelevata), css("--s4"), "c", true) ] }, options: optC });
+    tabella($("t-consumo"), ["Giorno", "Consumo", "Da FV e batteria", "Prelevata", "Autosufficienza"],
+      g.slice().reverse().map((x) => [ggmm(x.data), kwh(x.consumata), kwh(x.autosufficienza), kwh(x.prelevata), pct(x.autosufficienza_pct)]));
+
+    // produzione per mese
+    const m = d.mesi;
+    const dsM = [barre("Prodotta", m.map((x) => x.prodotta), css("--s1"), "m", true)];
+    if (m.some((x) => x.attesa != null)) dsM.push(linea("Attesa PVGIS", m.map((x) => x.attesa), css("--grigio"), { dataset: {
+      pointRadius: 6, pointHoverRadius: 8, pointBorderWidth: 2, pointBorderColor: css("--superficie"), pointBackgroundColor: css("--grigio"),
+      pointStyle: "circle", showLine: false, order: -1 } }));
+    disegna("g-mesi", { data: { labels: m.map((x) => meseTesto(x.mese)), datasets: dsM }, options: opzioni((v) => num(v, 0) + " kWh") });
+    tabella($("t-mesi"), ["Mese", "Giorni con dati", "Prodotta", "Attesa", "Consumo", "Immessa", "Prelevata", "Autocons.", "Autosuff."],
+      m.slice().reverse().map((x) => [meseTesto(x.mese), String(x.giorni_con_dati), kwh(x.prodotta), kwh(x.attesa), kwh(x.consumata), kwh(x.immessa), kwh(x.prelevata), pct(x.autoconsumo_pct), pct(x.autosufficienza_pct)]));
+
+    // batteria
+    const b = d.batteria;
+    const bb = svuota($("batt"));
+    if (b) {
+      const voce = (e, v) => el("div", {}, el("div", { class: "etichetta", text: e }), el("div", { class: "valore", text: v }));
+      const mis = el("div", { class: "misuratore" + ((b.soc != null && b.soc < 15) ? " bassa" : "") }, el("div", { style: `width:${Math.max(0, Math.min(100, b.soc || 0))}%` }));
+      bb.append(el("div", { style: "grid-column: 1 / -1" }, el("div", { class: "etichetta", text: "Carica (SOC)" }),
+        el("div", { class: "valore", text: `${num(b.soc, 0)} % · ${b.verso}${b.potenza_w ? " a " + kw(Math.abs(b.potenza_w)) : ""}` }), mis));
+      bb.append(voce("Salute (SOH)", pct(b.soh)), voce("Cicli", num(b.cicli, 0)), voce("Tensione", num(b.tensione_v, 0) + " V"), voce("Temperatura", num(b.temperatura_c, 0) + " °C"));
+      if (o.carica_batteria != null) bb.append(voce("Caricata oggi", kwh(o.carica_batteria)), voce("Scaricata oggi", kwh(o.scarica_batteria)));
+    } else {
+      bb.append(el("div", { class: "muted", text: "Nessun dato sulla batteria" }));
+    }
+    disegna("g-soc", { data: { labels: p.map((x) => x.ora), datasets: [linea("Carica batteria", p.map((x) => x.soc), css("--s3"), { area: true })] },
+      options: opzioni((v) => num(v, 0) + " %", { legenda: false, mirino: true, y: { min: 0, max: 100 } }) });
+    tabella($("t-soc"), ["Ora", "Carica %", "Potenza batteria"], p.slice().reverse().map((x) => [x.ora, num(x.soc, 0), kw(x.batteria_w)]));
+
+    // piede: fonti e convenzioni
+    const pi = svuota($("piede"));
+    const i = d.attesa.info || {};
+    pi.append(el("div", { text: d.attesa.configurata
+      ? `Produzione attesa: PVGIS v5.3 (JRC, Commissione Europea), strumento PVcalc, database ${i.database}, anni ${i.anni}; impianto ${num(i.kwp, 1)} kWp, inclinazione ${num(i.inclinazione, 0)}°${i.inclinazione_ottimizzata ? " (ottimizzata da PVGIS)" : ""}, orientamento ${num(i.orientamento, 0)}° (0 = sud), perdite ${num(i.perdite, 0)} %; media annua attesa ${kwh(i.annuale_kwh, 0)}; dati scaricati il ${i.scaricato}. L'attesa di un giorno è la media giornaliera del suo mese: una giornata nuvolosa sta sotto, una limpida sopra.`
+      : "Produzione attesa: PVGIS non configurato (impostare PVGIS_LAT, PVGIS_LON, IMPIANTO_KWP e, se noti, PVGIS_INCLINAZIONE e PVGIS_ORIENTAMENTO nel file .env)." }));
+    pi.append(el("div", { text: "Convenzioni: i contatori giornalieri sono quelli dell'inverter (si azzerano a mezzanotte); autoconsumo = prodotta − immessa; autosufficienza = consumo − prelevata; batteria positiva = in carica; rete positiva = immissione, negativa = prelievo (segno verificato il 20/10/2026 con il bilancio delle potenze). Dati letti in sola lettura da dati.db (una riga al minuto)." }));
+  }
+
+  // ---------- caricamento ----------
+  async function carica() {
+    document.body.classList.add("aggiornando");
+    try {
+      const r = await fetch(`/api/dati?ore=${stato.ore}&giorni=${stato.giorni}`, { cache: "no-store" });
+      const d = await r.json();
+      if (d.errore) throw new Error(d.errore);
+      stato.dati = d;
+      render(d);
+      const vecchio = document.querySelector(".errore"); if (vecchio) vecchio.remove();
+    } catch (e) {
+      let box = document.querySelector(".errore");
+      if (!box) { box = el("div", { class: "errore", role: "alert" }); $("avvisi").before(box); }
+      box.textContent = "Errore nel caricare i dati: " + e.message;
+    } finally {
+      document.body.classList.remove("aggiornando");
+    }
+  }
+  carica();
+  stato.timer = setInterval(carica, 60 * 1000);
+  const schema = window.matchMedia("(prefers-color-scheme: dark)");
+  if (schema.addEventListener) schema.addEventListener("change", () => { if (stato.dati) render(stato.dati); });
+})();
+</script>
+</body>
+</html>

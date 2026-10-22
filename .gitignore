@@ -1,0 +1,26 @@
+# credenziali, indirizzi e seriali: mai nel repository
+.env
+seriale_inverter.txt
+
+# dati raccolti e log
+*.db
+*.sqlite
+*.sqlite3
+logs/
+*.log
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# cache PVGIS (contiene la posizione dell'impianto) e configurazione locale dell'editor
+pvgis_cache.json
+.claude/
+
+# indirizzo della chiavetta trovato con la scoperta automatica (raccolta.py)
+.chiavetta_ip
+
+# dati di rete della chiavetta per la prenotazione DHCP (IP, MAC)
+chiavetta_rete.txt
