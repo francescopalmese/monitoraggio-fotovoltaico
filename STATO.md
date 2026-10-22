@@ -1,6 +1,6 @@
 # Stato del progetto: monitoraggio fotovoltaico ZCS
 
-Aggiornato: 20/10/2026, pomeriggio
+Aggiornato: 22/10/2026
 
 ## Impianto
 - Inverter ZCS Azzurro 3PH HYD10000 ZSS, ibrido trifase 10 kW, prodotto ottobre 2021.
@@ -26,6 +26,8 @@ Aggiornato: 20/10/2026, pomeriggio
 
 - 20/10/2026, sera: **prenotazione DHCP fatta** (con l'ok esplicito dell'utente, dal pannello browser): router ZTE H2640 di PosteMobile, menu Rete locale, LAN, scheda IPv4, sezione "Indirizzi IP statici", "Nuovo elemento": nome "Chiavetta fotovoltaico", MAC preso da "Selezionare tra i dispositivi associati" (la chiavetta compare con il suo seriale come nome host), indirizzo scritto a mano (quello attuale), "Applica", conferma "I dati sono stati salvati!". Voce riaperta e controllata: nome, indirizzo e MAC giusti. Da ora il router assegna sempre lo stesso indirizzo alla chiavetta. Nota: prima della prenotazione l'indirizzo cambiava a ogni rinnovo del contratto DHCP, ogni 3 ore (12:53 e 15:53 del 20/10, più una lettura fallita alle 18:53); la scoperta automatica ha sempre recuperato nello stesso minuto. L'indirizzo prenotato è quello in cache dalle 15:53; `chiavetta_rete.txt` rigenerato la sera con quello.
 
+- 22/10/2026: **progetto pubblicato su GitHub**: https://github.com/palmesefranci-a11y/monitoraggio-fotovoltaico (repository pubblico, licenza MIT, ramo `main`). Prima del push: `.gitignore` verificato con `git status --ignored`, ricerca di IP, coordinate, seriali, MAC e token nei file candidati, controllo incrociato con i valori veri dei file esclusi (tutti assenti), 50 test verdi. Pubblicati 28 file: documentazione, `.env.example`, codice, dashboard, test, due screenshot, `LICENSE`. Fuori dal repository: `.env`, `dati.db`, `logs/`, `.venv/`, `pvgis_cache.json`, `.chiavetta_ip`, `chiavetta_rete.txt`, `seriale_inverter.txt`, `.claude/`. GitHub CLI installato con winget.
+
 ## In corso
 - Tappa 1: `LOGGER_IP` nel `.env` aggiornato dall'utente con l'indirizzo prenotato (20/10 sera); `--prova-rete` conferma: il `.env` risponde sulla porta 8899 e la scoperta trova lo stesso indirizzo. Restano: client per l'API Terze Parti (aspetta il token), screenshot e frase per il CV della Tappa 1. L'utente ha aperto i ticket a ZCS.
 - Confronto con l'app dei totali di un giorno intero (per esempio il 19/10: 12,1 kWh prodotti, 22,9 consumati, 14,9 prelevati, 0,1 immessi): lo fa l'utente guardando lo storico nell'app Azzurro Systems.
@@ -42,6 +44,7 @@ Monitoraggio del mio impianto fotovoltaico da 10 kW: lettura locale dell'inverte
 - Dashboard senza librerie aggiuntive (libreria standard + Chart.js da CDN), scelta del 16/10/2026: niente da installare; se servisse lavorare offline basta salvare `chart.umd.min.js` in locale.
 - Contatori giornalieri: valore del giorno = ultima lettura del giorno (non il massimo), perché le prime letture dopo mezzanotte possono portare ancora il valore del giorno prima.
 - "Giornata di sole" per l'avviso = media oraria massima del fotovoltaico oltre metà dei kWp (non c'è un sensore di irraggiamento).
+- Repository pubblico su GitHub con licenza MIT (22/10/2026); i commit usano l'email noreply di GitHub, con nome ed email impostati solo in questo repository (`git config` locale, non globale).
 
 ## Domande aperte
 - kWp dei pannelli, posizione, inclinazione e orientamento (per PVGIS) e marca della batteria.

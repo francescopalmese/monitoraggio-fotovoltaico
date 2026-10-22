@@ -38,6 +38,7 @@ Legenda: [x] fatto, [ ] da fare, [~] in corso
 - [x] Azzeramento a mezzanotte verificato sui dati veri del 17-18/10 (contatore a 0 alle 00:00:06 locali; 20/10/2026)
 - [ ] Confrontare con l'app i totali di un giorno intero (produzione, consumo, scambio), per esempio il 19/10
 - [ ] Opzionale: avvio automatico della dashboard con l'accesso a Windows (attività pianificata, come la raccolta)
+- [x] Pubblicazione su GitHub: repository pubblico con licenza MIT, https://github.com/palmesefranci-a11y/monitoraggio-fotovoltaico (22/10/2026)
 
 ## Tappa 3: controllo (solo con conferma esplicita e documentazione ufficiale)
 - [ ] Verificare sulla mappa ufficiale quali parametri sono scrivibili (es. modalità di lavoro, carica programmata)
