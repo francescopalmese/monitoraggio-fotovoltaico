@@ -137,6 +137,9 @@
     -webkit-mask: radial-gradient(circle, transparent 27px, #000 28px); mask: radial-gradient(circle, transparent 27px, #000 28px);
     animation: ruota 5s linear infinite; }
   .logo-slot::after { content: ""; position: absolute; inset: 6px; border-radius: 50%; border: 1px solid var(--bordo-forte); }
+  /* il logo vero: riempie il cerchio; se manca (server vecchio) torna il segnaposto con gli anelli */
+  .logo-slot img { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+  .logo-slot.con-logo::before, .logo-slot.con-logo::after, .logo-slot.con-logo .segnaposto { display: none; }
   @keyframes ruota { to { transform: rotate(360deg); } }
   .titolo { min-width: 0; }
   /* titolo "alla Cyberpunk": stencil pesante, due fenditure diagonali del colore di sfondo che tagliano la parola,
@@ -331,7 +334,7 @@
 <main>
   <header class="testata">
     <div class="marchio">
-      <div class="logo-slot" title="Spazio per il logo (il polpo)">LOGO</div>
+      <div class="logo-slot con-logo" title="Il polpo: il logo dei progetti personali"><img src="/logo.png" alt="Logo: un polpo al neon" width="256" height="256" decoding="async" onerror="this.parentNode.classList.remove('con-logo'); this.remove()"><span class="segnaposto">LOGO</span></div>
       <div class="titolo">
         <h1 data-testo="Fotovoltaico Casa"><span class="parola">Fotovoltaico<i class="cut" style="left:23%"></i><i class="cut b" style="left:61%"></i></span><span class="blocco">Casa</span></h1>
         <p class="sotto" id="sottotitolo">Caricamento dei dati…</p>

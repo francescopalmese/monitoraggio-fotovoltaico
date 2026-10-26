@@ -116,6 +116,10 @@ def test_server_http_serve_pagina_e_api(tmp_path, monkeypatch):
         assert d["ultima_lettura"]["ts"] == "2026-10-16T13:50:00+00:00"
         assert d["attesa"]["configurata"] is False
         assert "nessuna_lettura" in [a["codice"] for a in d["avvisi"]]   # i dati finti sono vecchi
+        with urllib.request.urlopen(f"http://127.0.0.1:{porta}/logo.png", timeout=5) as r:   # il polpo della testata
+            assert r.headers["Content-Type"] == "image/png"
+            assert r.read()[:8] == b"\x89PNG\r\n\x1a\n"
+        assert '<img src="/logo.png"' in pagina
         with pytest.raises(urllib.error.HTTPError) as errore:
             urllib.request.urlopen(f"http://127.0.0.1:{porta}/altro", timeout=5)
         assert errore.value.code == 404

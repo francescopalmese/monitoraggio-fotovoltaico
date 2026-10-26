@@ -41,6 +41,7 @@ import pvgis
 
 CARTELLA = pathlib.Path(__file__).resolve().parent
 PAGINA = CARTELLA / "dashboard.html"
+LOGO = CARTELLA / "logo_polpo.png"          # il polpo al neon nel cerchio della testata (servito come /logo.png)
 CACHE_PVGIS = CARTELLA / "pvgis_cache.json"
 PORTA_DEFAULT = 8780
 MAX_ORE, MAX_GIORNI = 72, 92
@@ -173,6 +174,8 @@ class Gestore(http.server.BaseHTTPRequestHandler):
             self._invia(PAGINA.read_bytes(), "text/html; charset=utf-8")
         elif url.path == "/api/dati":
             self._api(urllib.parse.parse_qs(url.query))
+        elif url.path == "/logo.png" and LOGO.exists():
+            self._invia(LOGO.read_bytes(), "image/png")
         else:
             self.send_error(404, "Pagina non trovata")
 

@@ -56,8 +56,9 @@ colori, un po' più scuri, con grana dimezzata e quasi senza aloni.
 L'intensità si regola con le variabili CSS `--grana` e `--bagliore` in cima a
 `dashboard.html`. Chi preferisce meno movimento (impostazione di sistema
 "riduci animazioni") non vede glitch, sfarfallio né linea di scansione.
-Il cerchio tratteggiato in alto a sinistra è lo spazio riservato al logo (il
-polpo), ancora da disegnare.
+Nel cerchio in alto a sinistra c'è il logo: un polpo al neon (`logo_polpo.png`,
+generato con ComfyUI e servito dal server come `/logo.png`); se il file manca resta
+il segnaposto con l'anello.
 
 ![Tema chiaro](screenshot_dashboard_chiaro.png)
 
