@@ -39,7 +39,7 @@ Legenda: [x] fatto, [ ] da fare, [~] in corso
 - [ ] Confrontare con l'app i totali di un giorno intero (produzione, consumo, scambio), per esempio il 19/10
 - [x] Meteo e temperatura della posizione nella testata, da Open-Meteo (`meteo.py`, 26/10/2026)
 - [ ] Opzionale: avvio automatico della dashboard con l'accesso a Windows (attività pianificata, come la raccolta)
-- [x] Pubblicazione su GitHub: repository pubblico con licenza MIT, https://github.com/palmesefranci-a11y/monitoraggio-fotovoltaico (22/10/2026)
+- [x] Pubblicazione su GitHub: repository pubblico con licenza MIT, https://github.com/francescopalmese/monitoraggio-fotovoltaico (22/10/2026)
 - [x] Nuova veste grafica: stile cyberpunk neon, tema auto/chiaro/scuro, flusso animato, vista TV, modalità widget (26/10/2026, solo `dashboard.html`)
 - [x] Logo del polpo nel cerchio della testata (generato con ComfyUI e inserito il 26/10/2026; originali in `D:\StableDiffusion\Immagini\Logo_polpo\`)
 - [x] Commit e push della nuova veste grafica e del meteo (26/10/2026)
