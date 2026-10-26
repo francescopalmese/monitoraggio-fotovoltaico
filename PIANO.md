@@ -37,8 +37,12 @@ Legenda: [x] fatto, [ ] da fare, [~] in corso
 - [x] README, screenshot (`screenshot_dashboard.png`, `screenshot_avvisi_dati_finti.png`), frase per il CV in `STATO.md` (16/10/2026)
 - [x] Azzeramento a mezzanotte verificato sui dati veri del 17-18/10 (contatore a 0 alle 00:00:06 locali; 20/10/2026)
 - [ ] Confrontare con l'app i totali di un giorno intero (produzione, consumo, scambio), per esempio il 19/10
+- [x] Meteo e temperatura della posizione nella testata, da Open-Meteo (`meteo.py`, 26/10/2026)
 - [ ] Opzionale: avvio automatico della dashboard con l'accesso a Windows (attività pianificata, come la raccolta)
 - [x] Pubblicazione su GitHub: repository pubblico con licenza MIT, https://github.com/palmesefranci-a11y/monitoraggio-fotovoltaico (22/10/2026)
+- [x] Nuova veste grafica: stile cyberpunk neon, tema auto/chiaro/scuro, flusso animato, vista TV, modalità widget (26/10/2026, solo `dashboard.html`)
+- [ ] Logo del polpo nel cerchio della testata (lo disegna l'utente, o lo prepariamo in SVG)
+- [x] Commit e push della nuova veste grafica e del meteo (26/10/2026)
 
 ## Tappa 3: controllo (solo con conferma esplicita e documentazione ufficiale)
 - [ ] Verificare sulla mappa ufficiale quali parametri sono scrivibili (es. modalità di lavoro, carica programmata)

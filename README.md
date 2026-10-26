@@ -7,7 +7,7 @@ escluso da git (modello in `.env.example`).
 
 Stato: Tappa 1 (raccolta dati) in corso, Tappa 2 (dashboard) fatta: costruita
 il 16/10/2026, confronto con PVGIS attivo dal 20/10/2026 (kWp stimati, da
-affinare). Vedi `STATO.md` e `PIANO.md`.
+affinare), nuova veste grafica il 26/10/2026. Vedi `STATO.md` e `PIANO.md`.
 
 ## Come funziona
 
@@ -25,7 +25,74 @@ Le scelte e le fonti sono in `tappa0_ricognizione.md`.
 
 ## Dashboard
 
-![Dashboard con i dati veri](screenshot_dashboard.png)
+![Dashboard con i dati veri, tema scuro](screenshot_dashboard.png)
+
+### Identità visiva
+
+Futuro grezzo: neon su una notte sporca, con i numeri in ordine. La palette va
+dal rosso al blu passando per rosa, viola e azzurro (fotovoltaico azzurro, casa
+rosa, batteria viola, rete blu, avvisi rosso). Lo sfondo ha griglia, grana,
+scanline, vignettatura, qualche granello di polvere e uno sfarfallio ogni
+tanto; i pannelli hanno tagli diagonali, una striscia a rischio in alto e una
+micro-etichetta tecnica nell'angolo; ogni pannello ha una cornice al neon
+completa nel colore della sua serie, che segue anche i tagli; le tabelle hanno
+una cornice al neon; una linea di scansione attraversa lo schermo ogni dieci
+secondi, il titolo ha un glitch ogni quattro e una banda "strappata" scatta di
+lato ogni pochi secondi; le barre di avanzamento sono segmentate; sotto la
+testata corre una striscia di stato con un codice a barre decorativo. Il titolo in alto è "alla Cyberpunk": Black
+Ops One, uno stencil pesante, con due fenditure diagonali del colore di sfondo
+che tagliano la parola come una lama e la seconda parola in un blocco rosa
+pieno sullo stesso piano (l'idea del logo del gioco, rifatta con un font
+libero: niente asset proprietari). I nomi delle sezioni sono in Audiowide,
+largo e squadrato, bianchi e nitidi con un alone neon nel colore del pannello;
+sotto ogni nome un tratto di neon. Le barre dei grafici hanno
+una sfumatura dal pieno al trasparente, strisce diagonali per la parte
+scambiata con la rete e una lamella luminosa in cima. Il testo resta sempre nitido: nessuna ombra né
+sdoppiamento sulle parole, il neon sta solo su bordi, cornici e linee. Font
+(da Google Fonts, con ripiego di sistema senza internet): Black Ops One per
+il titolo, Audiowide per i nomi delle sezioni, Oxanium per tutto il resto:
+frasi, etichette, pulsanti, numeri, tabelle e micro-testi. Nel tema chiaro restano gli stessi
+colori, un po' più scuri, con grana dimezzata e quasi senza aloni.
+L'intensità si regola con le variabili CSS `--grana` e `--bagliore` in cima a
+`dashboard.html`. Chi preferisce meno movimento (impostazione di sistema
+"riduci animazioni") non vede glitch, sfarfallio né linea di scansione.
+Il cerchio tratteggiato in alto a sinistra è lo spazio riservato al logo (il
+polpo), ancora da disegnare.
+
+![Tema chiaro](screenshot_dashboard_chiaro.png)
+
+- **Meteo:** nella testata, accanto allo stato dell'inverter, un chip con
+  temperatura, condizione, minima e massima di oggi, alba e tramonto nella
+  posizione dell'impianto, da Open-Meteo (API pubblica senza chiave, vedi
+  `meteo.py`; la posizione è la stessa di PVGIS e viene inviata a Open-Meteo;
+  tenuto in memoria 10 minuti; `--no-pvgis` spegne anche il meteo).
+- **Filtri:** l'intervallo delle ore sta in cima al grafico della potenza, i
+  giorni mostrati in cima a "Produzione per giorno" (valgono anche per il
+  consumo); la pagina si apre sui numeri di oggi.
+- **Tema:** il pulsante "tema" passa da automatico (segue Windows) a chiaro a
+  scuro; la scelta resta nel browser. `?tema=dark` o `?tema=light` forza il
+  tema solo per quella vista (comodo per widget incorporati e screenshot).
+- **Vista TV o tablet:** `http://127.0.0.1:8780/?tv=1` (o il pulsante "TV")
+  mostra solo numero del giorno, flusso, tessere e potenza, con caratteri
+  grandi.
+- **Widget:** `?widget=nome` mostra un solo pannello senza testata né filtri,
+  pronto da incorporare altrove (sfondo animato, OBS, un tablet). Nomi:
+  `eroe`, `flusso`, `kpi`, `potenza`, `giorni`, `consumo`, `mesi`,
+  `batteria`. Con `&sfondo=trasparente` la pagina non ha sfondo.
+- **Grafico della potenza:** trascina per ingrandire un intervallo, Ctrl +
+  rotella per lo zoom, Maiusc + trascina per spostarti, pulsante "↺ zoom" per
+  tornare indietro (plugin chartjs-plugin-zoom da CDN); i pulsanti sopra il
+  grafico mostrano una linea sola. Lo zoom sopravvive all'aggiornamento al minuto.
+- **Flusso di energia:** quattro icone disegnate in SVG, sole con i raggi
+  (ruotano piano quando produce), casa con il tetto, batteria con il polo e il
+  livello che si riempie col SOC, rete come un traliccio; le potenze sono
+  quelle dell'ultima lettura. Le linee tratteggiate scorrono nel verso del
+  flusso e hanno una freccia in punta (sotto 50 W il flusso è considerato
+  fermo).
+
+![Vista TV](screenshot_tv.png)
+
+![Widget del flusso](screenshot_widget_flusso.png)
 
 Avvio (dalla cartella del progetto, con l'ambiente virtuale attivo o con
 `.venv\Scripts\python.exe`):
@@ -118,9 +185,10 @@ non la posizione di casa). `--env` evita di toccare il `.env` vero.
   installare e niente da configurare; basta per una pagina usata da una persona
   sulla propria rete. Un framework (Flask, FastAPI) avrebbe senso solo con più
   pagine, utenti o autenticazione.
-- Grafici con Chart.js caricato da CDN: la pagina ha bisogno di internet per
-  disegnarli, ma i dati non escono dal PC. Per lavorare del tutto offline basta
-  scaricare `chart.umd.min.js` accanto a `dashboard.html` e cambiare il `src`.
+- Grafici con Chart.js caricato da CDN e font da Google Fonts: la pagina ha
+  bisogno di internet per disegnarli, ma i dati non escono dal PC. Per lavorare
+  del tutto offline basta scaricare `chart.umd.min.js` accanto a `dashboard.html`
+  e cambiare il `src`; i font hanno già un ripiego di sistema.
 - I calcoli (giorni, mesi, autoconsumo, attesa, avvisi) sono in `calcoli.py`,
   funzioni senza database né rete, così si provano con dati finti.
 - Il database si apre in sola lettura (`mode=ro`): la dashboard non può
@@ -137,9 +205,10 @@ non la posizione di casa). `--env` evita di toccare il `.env` vero.
 - `raccolta_una_volta.bat`: lanciatore alternativo per l'Utilità di pianificazione (apre una finestra).
 - `calcoli.py`: aggregazioni per giorno e mese, serie di potenza, batteria, attesa, avvisi.
 - `pvgis.py`: client dell'API PVGIS con cache su file.
+- `meteo.py`: meteo attuale da Open-Meteo, con cache in memoria.
 - `dashboard.py` e `dashboard.html`: server locale e pagina della dashboard.
 - `genera_db_finto.py`: database finto per provare la dashboard e gli avvisi.
-- `tests/`: test automatici con dati finti, `python -m pytest tests -q` (50 test).
+- `tests/`: test automatici con dati finti, `python -m pytest tests -q` (56 test).
 - `.env.example`: modello per il file `.env` con IP, seriali, token e parametri PVGIS (mai in git).
 - `requirements.txt`: librerie Python (la dashboard non ne aggiunge).
 

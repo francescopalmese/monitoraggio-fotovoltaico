@@ -36,6 +36,7 @@ import urllib.parse
 from dotenv import load_dotenv
 
 import calcoli
+import meteo
 import pvgis
 
 CARTELLA = pathlib.Path(__file__).resolve().parent
@@ -162,6 +163,7 @@ class Server(http.server.ThreadingHTTPServer):
         self.kwp = kwp
         self.parametri_pvgis = parametri_pvgis
         self.usa_rete = usa_rete
+        self.meteo = meteo.Meteo()      # meteo della posizione, tenuto in memoria 10 minuti
 
 
 class Gestore(http.server.BaseHTTPRequestHandler):
@@ -189,10 +191,23 @@ class Gestore(http.server.BaseHTTPRequestHandler):
                 dati = costruisci_dati(con, self.server.kwp, ore, giorni, mensili=mensili, info_pvgis=info)
             finally:
                 con.close()
+            dati["meteo"] = self._meteo()
         except Exception as errore:               # noqa: BLE001 - la pagina mostra l'errore
             logging.exception("errore nella risposta /api/dati")
             dati = {"errore": f"{type(errore).__name__}: {errore}"}
         self._invia(json.dumps(dati, ensure_ascii=False).encode("utf-8"), "application/json; charset=utf-8")
+
+    def _meteo(self):
+        """Meteo attuale nella posizione di PVGIS; mai un'eccezione, al massimo {"errore": ...}."""
+        p = self.server.parametri_pvgis
+        if not p:
+            return {"errore": "posizione non configurata (PVGIS_LAT e PVGIS_LON nel file .env)"}
+        if not self.server.usa_rete:
+            return {"errore": "rete disattivata con --no-pvgis"}
+        try:
+            return self.server.meteo.attuale(p["lat"], p["lon"])
+        except Exception as errore:               # noqa: BLE001
+            return {"errore": f"{type(errore).__name__}: {errore}"}
 
     def _invia(self, corpo, tipo):
         self.send_response(200)

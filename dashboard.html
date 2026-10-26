@@ -4,152 +4,433 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fotovoltaico di casa</title>
+<script>
+  // Tema prima del primo disegno, per evitare il lampo: "auto" segue Windows, altrimenti quello scelto.
+  (function () {
+    try {
+      // ?tema=light|dark forza il tema per questa vista (utile per widget incorporati e screenshot)
+      var forzato = new URLSearchParams(location.search).get("tema");
+      var scelto = (forzato === "light" || forzato === "dark") ? forzato : (localStorage.getItem("tema") || "auto");
+      var reso = scelto === "auto" ? (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark") : scelto;
+      document.documentElement.dataset.theme = reso;
+      document.documentElement.dataset.temaScelto = scelto;
+    } catch (e) { document.documentElement.dataset.theme = "dark"; }
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Audiowide&family=Oxanium:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  /* Colori come variabili: una definizione per tema, il resto della pagina usa i ruoli.
-     Palette di riferimento validata (contrasto e daltonismo) per i grafici. */
+  /* ============ identità: futuristico e leggibile su una strada sporca ============
+     Font: Rajdhani (etichette, pulsanti, numeri), Orbitron (titolo), Permanent Marker (nomi delle sezioni,
+     stile marker da strada), Share Tech Mono (tabelle e micro-testi), Inter (frasi). Nessuna ombra o
+     sdoppiamento sul testo: il neon sta su cornici, linee e punti. Tutti i colori sono variabili: il tema
+     scuro è la base, quello chiaro ridefinisce. I nomi --s1..--s4, --grigio, --superficie, --tooltip,
+     --bordo, --bordo-forte, --griglia, --asse, --muted, --testo, --testo-2, --s3-traccia, --ok-testo,
+     --attenzione, --critico, --mono, --neon-azzurro sono letti anche dal JavaScript per i grafici. */
   :root {
+    color-scheme: dark;
+    --titolo: "Black Ops One", "Russo One", "Rajdhani", system-ui, sans-serif;   /* titolo in alto: stencil pesante, tagliato da fenditure */
+    --sezione: "Audiowide", "Rajdhani", system-ui, sans-serif;                   /* nomi delle sezioni */
+    --display: "Oxanium", "Rajdhani", system-ui, sans-serif;     /* etichette, pulsanti, numeri */
+    --corpo: "Oxanium", Inter, system-ui, sans-serif;             /* frasi */
+    --mono: "Oxanium", "Share Tech Mono", ui-monospace, monospace; /* tabelle, micro-testi, assi dei grafici */
+
+    --fondo: #050408; --griglia-fondo: rgba(170, 120, 255, .07);
+    --pannello: #0d0a18; --superficie: #0e0b1a; --tooltip: #15112a;
+    --bordo: rgba(170, 130, 255, .22); --bordo-forte: rgba(170, 130, 255, .55);
+    --testo: #f4f3ff; --testo-2: #c3c2e0; --muted: #918fba;
+    --griglia: rgba(170, 130, 255, .12); --asse: rgba(170, 130, 255, .45);
+
+    --neon-rosso: #ff1f5a; --neon-rosa: #ff3fd1; --neon-viola: #a95cff; --neon-azzurro: #2ff0ff; --neon-blu: #4a7dff;
+    --s1: var(--neon-azzurro);   /* fotovoltaico */
+    --s2: var(--neon-rosa);      /* casa */
+    --s3: var(--neon-viola);     /* batteria */
+    --s4: var(--neon-blu);       /* rete */
+    --grigio: #9b9bc4;           /* attesa PVGIS */
+    --s3-traccia: rgba(169, 92, 255, .18);
+    --ok: var(--neon-azzurro); --ok-testo: var(--neon-azzurro); --attenzione: var(--neon-rosa); --serio: var(--neon-rosa); --critico: var(--neon-rosso);
+    --bagliore: 1;      /* 1 = cornici e linee brillano (mai il testo) */
+    --cornice: 1.5px;   /* spessore della cornice al neon dei pannelli */
+    --tratto: 1px;      /* bordi di pulsanti, chip e tabelle */
+    --tratto-svg: 1.5;  /* contorni delle icone del flusso */
+    --grana: 1;         /* intensità di grana, scanline, vignettatura, polvere */
+    --vignetta: rgba(0, 0, 0, .6);
+  }
+  :root[data-theme="light"] {
     color-scheme: light;
-    --pagina: #f9f9f7;  --superficie: #fcfcfb;
-    --testo: #0b0b0b;   --testo-2: #52514e;  --muted: #898781;
-    --griglia: #e1e0d9; --asse: #c3c2b7;     --bordo: rgba(11,11,11,.10);
-    --s1: #2a78d6;  /* fotovoltaico */   --s2: #eb6834;  /* casa (carico) */
-    --s3: #1baf7a;  /* batteria */       --s4: #eda100;  /* rete */
-    --grigio: #898781;                   /* serie di contesto (attesa PVGIS) */
-    --s3-traccia: #d2f0e4;
-    --ok: #0ca30c; --attenzione: #fab219; --serio: #ec835a; --critico: #d03b3b; --ok-testo: #006300;
-    --tooltip: #ffffff;
+    --fondo: #ecebf4; --griglia-fondo: rgba(90, 70, 200, .09);
+    --pannello: #ffffff; --superficie: #ffffff; --tooltip: #ffffff;
+    --bordo: rgba(90, 70, 200, .22); --bordo-forte: rgba(90, 70, 200, .5);
+    --testo: #14122a; --testo-2: #45476a; --muted: #6f7193;
+    --griglia: rgba(90, 70, 200, .12); --asse: rgba(90, 70, 200, .4);
+    --neon-rosso: #f0053f; --neon-rosa: #e400b4; --neon-viola: #6a2bff; --neon-azzurro: #0096c7; --neon-blu: #1f4dff;
+    --grigio: #7a7da6; --s3-traccia: rgba(106, 43, 255, .18);
+    --bagliore: .35; --grana: .5; --vignetta: rgba(40, 30, 90, .16);
+    --cornice: 2.5px; --tratto: 1.5px; --tratto-svg: 2.2;
   }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      color-scheme: dark;
-      --pagina: #0d0d0d;  --superficie: #1a1a19;
-      --testo: #f0efec;   --testo-2: #c3c2b7;  --muted: #898781;
-      --griglia: #2c2c2a; --asse: #383835;     --bordo: rgba(255,255,255,.10);
-      --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
-      --s3-traccia: #143d2e; --ok-testo: #0ca30c; --tooltip: #252523;
-    }
-  }
+
   * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--pagina); color: var(--testo);
-    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  main { max-width: 1240px; margin: 0 auto; padding: 20px 16px 40px; }
-  h1 { font-size: 22px; margin: 0 0 2px; font-weight: 650; }
-  h2 { font-size: 14px; margin: 0 0 2px; font-weight: 600; }
-  .muted { color: var(--muted); } .testo-2 { color: var(--testo-2); }
-  .sotto { font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+  html, body { margin: 0; background: var(--fondo); color: var(--testo); font: 14px/1.5 var(--corpo); -webkit-font-smoothing: antialiased; }
+  html { overflow-x: clip; }   /* gli effetti fissi che scattano di lato non devono allargare la pagina */
+
+  /* ---------- la strada: griglia, chiazze di neon, polvere, grana, scanline, vignettatura, sfarfallio ---------- */
+  .sfondo { position: fixed; inset: 0; z-index: -1; pointer-events: none; animation: sfarfallio 11s infinite;
+    background:
+      radial-gradient(120% 90% at 50% 40%, transparent 50%, var(--vignetta) 100%),
+      radial-gradient(1.5px 1.5px at 21% 33%, rgba(255,255,255,.45), transparent 70%),
+      radial-gradient(1px 1px at 73% 18%, rgba(255,255,255,.4), transparent 70%),
+      radial-gradient(1.5px 1.5px at 88% 71%, rgba(255,255,255,.35), transparent 70%),
+      radial-gradient(1px 1px at 41% 86%, rgba(255,255,255,.4), transparent 70%),
+      radial-gradient(900px 520px at 4% -14%, color-mix(in srgb, var(--neon-rosa) 22%, transparent), transparent 60%),
+      radial-gradient(900px 560px at 104% 106%, color-mix(in srgb, var(--neon-blu) 24%, transparent), transparent 60%),
+      radial-gradient(500px 300px at 70% 30%, color-mix(in srgb, var(--neon-viola) 10%, transparent), transparent 70%),
+      linear-gradient(var(--griglia-fondo) 1px, transparent 1px), linear-gradient(90deg, var(--griglia-fondo) 1px, transparent 1px);
+    background-size: auto, auto, auto, auto, auto, auto, auto, auto, 32px 32px, 32px 32px; }
+  .sfondo::before { content: ""; position: absolute; inset: 0; opacity: calc(.15 * var(--grana)); mix-blend-mode: screen;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .9 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>"); }
+  .sfondo::after { content: ""; position: absolute; inset: 0; opacity: calc(.32 * var(--grana));
+    background: repeating-linear-gradient(transparent 0 3px, rgba(0, 0, 0, .25) 3px 4px); }
+  @keyframes sfarfallio { 0%, 89%, 92%, 95%, 100% { opacity: 1; } 90% { opacity: .85; } 91% { opacity: .96; } 93.5% { opacity: .92; } }
+  /* linea di scansione che attraversa lo schermo */
+  .scan { position: fixed; left: 0; right: 0; top: -3px; height: 3px; z-index: 0; pointer-events: none; opacity: calc(.35 * var(--bagliore) + .08);
+    background: linear-gradient(90deg, transparent, var(--neon-azzurro) 30%, var(--neon-rosa) 70%, transparent); animation: scansione 10s linear infinite; }
+  @keyframes scansione { 0% { top: -3px; } 100% { top: 100%; } }
+  /* strappo: una banda che scatta di lato per un istante, come un segnale disturbato */
+  .tear { position: fixed; left: 0; right: 0; height: 14px; top: 30%; z-index: 2; pointer-events: none; opacity: 0; mix-blend-mode: screen;
+    background: linear-gradient(90deg, transparent 0, color-mix(in srgb, var(--neon-rosa) 70%, transparent) 25%, color-mix(in srgb, var(--neon-azzurro) 70%, transparent) 75%, transparent);
+    animation: strappo 6s infinite steps(1); }
+  @keyframes strappo { 0%, 38%, 41%, 66%, 69%, 84%, 86%, 100% { opacity: 0; }
+    38.5% { opacity: .9; top: 22%; transform: translateX(-10px); } 39.5% { opacity: .9; top: 23%; transform: translateX(12px); } 40.5% { opacity: .6; top: 61%; transform: translateX(-6px); }
+    66.5% { opacity: .9; top: 48%; transform: translateX(14px); } 67.5% { opacity: .7; top: 50%; transform: translateX(-12px); }
+    84.5% { opacity: .8; top: 12%; transform: translateX(8px); } }
+
+  main { max-width: 1280px; margin: 0 auto; padding: 16px 20px 44px; position: relative; }
   a { color: inherit; }
+  .mono { font-family: var(--mono); }
 
-  /* avvisi: icona + testo, mai solo colore */
-  .avvisi { display: grid; gap: 8px; margin: 12px 0; }
-  .avviso { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 8px;
-    background: var(--superficie); border: 1px solid var(--bordo); border-left: 4px solid var(--muted); }
-  .avviso.critico { border-left-color: var(--critico); }
-  .avviso.attenzione { border-left-color: var(--attenzione); }
-  .avviso.info { border-left-color: var(--asse); }
-  .avviso .icona { font-size: 16px; line-height: 1.2; }
-  .avviso strong { display: block; font-size: 13px; }
+  /* nomi delle sezioni: Audiowide, largo e squadrato; nucleo bianco nitido e alone neon nel colore del pannello */
+  .et { font: 400 17px/1.25 var(--sezione); letter-spacing: .03em; text-transform: uppercase; color: var(--testo); display: block; min-width: 0;
+    text-shadow: 0 0 calc(7px * var(--bagliore)) color-mix(in srgb, var(--accento, var(--s1)) 70%, transparent),
+                 0 0 calc(18px * var(--bagliore)) color-mix(in srgb, var(--accento, var(--s1)) 40%, transparent); }
+  .et::after { content: ""; display: block; width: 44px; height: 3px; margin-top: 6px; background: var(--accento, var(--s1)); box-shadow: 0 0 calc(10px * var(--bagliore)) var(--accento, var(--s1)); }
+  .tessera .et { font-size: 13px; }
+  .pannello[data-tag] > .et { padding-right: 96px; }   /* la micro-etichetta in alto a destra non si sovrappone mai al nome */
+
+  /* ---------- pannelli: cornice al neon completa che segue i tagli diagonali, interno scuro con alone interno ---------- */
+  .pannello { position: relative; background: var(--accento, var(--s1)); min-width: 0;
+    clip-path: polygon(18px 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%, 0 18px); }
+  .pannello::before { content: ""; position: absolute; inset: var(--cornice); z-index: 0; background: var(--pannello);
+    clip-path: polygon(17px 0, 100% 0, 100% calc(100% - 17px), calc(100% - 17px) 100%, 0 100%, 0 17px);
+    box-shadow: inset 0 0 28px color-mix(in srgb, var(--accento, var(--s1)) calc(16% * var(--bagliore) + 4%), transparent); }
+  .pannello > * { position: relative; z-index: 1; }
+  .pannello[data-tag]::after { content: attr(data-tag); position: absolute; right: 14px; top: 10px; z-index: 1; font: 10px var(--mono); letter-spacing: .2em; color: var(--muted); }
+
+  /* ---------- testata ---------- */
+  .testata { display: flex; align-items: center; gap: 16px; padding: 4px 0 12px; flex-wrap: wrap; }
+  .marchio { display: flex; align-items: center; gap: 16px; min-width: 0; flex: 1 1 320px; }   /* logo e titolo restano sempre sulla stessa riga */
+  /* il lato del logo lo imposta lo script: uguale all'altezza di titolo più sottotitolo, sempre un cerchio */
+  .logo-slot { position: relative; width: 48px; height: 48px; flex: none; border-radius: 50%; display: grid; place-items: center;
+    font: 11px var(--mono); letter-spacing: .2em; color: var(--muted); background: color-mix(in srgb, var(--pannello) 70%, transparent); }
+  .logo-slot::before { content: ""; position: absolute; inset: 0; border-radius: 50%;
+    background: conic-gradient(from 0deg, var(--neon-rosa) 0 240deg, var(--neon-azzurro) 240deg 300deg, transparent 300deg 360deg);
+    -webkit-mask: radial-gradient(circle, transparent 27px, #000 28px); mask: radial-gradient(circle, transparent 27px, #000 28px);
+    animation: ruota 5s linear infinite; }
+  .logo-slot::after { content: ""; position: absolute; inset: 6px; border-radius: 50%; border: 1px solid var(--bordo-forte); }
+  @keyframes ruota { to { transform: rotate(360deg); } }
+  .titolo { min-width: 0; }
+  /* titolo "alla Cyberpunk": stencil pesante, due fenditure diagonali del colore di sfondo che tagliano la parola,
+     seconda parola in un blocco rosa pieno sullo stesso piano della prima */
+  .titolo h1 { position: relative; margin: 0; font: 400 26px/1 var(--titolo); letter-spacing: .02em; text-transform: uppercase; display: flex; align-items: center; gap: .32em; }
+  .titolo h1 .parola { position: relative; display: inline-block;
+    text-shadow: 0 0 calc(8px * var(--bagliore)) color-mix(in srgb, var(--neon-rosa) 75%, transparent), 0 0 calc(22px * var(--bagliore)) color-mix(in srgb, var(--neon-rosa) 45%, transparent); }
+  .titolo h1 .cut { position: absolute; top: -10%; bottom: -10%; width: 4px; background: var(--fondo); transform: skewX(-28deg); pointer-events: none; }
+  .titolo h1 .cut.b { width: 3px; }
+  .titolo h1 .blocco { display: inline-block; background: var(--neon-rosa); color: var(--fondo); padding: .06em .16em .02em; line-height: 1;
+    clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); }
+  /* glitch del titolo: copie colorate a fette che scattano di lato; il testo vero sotto resta nitido */
+  .titolo h1::before, .titolo h1::after { content: attr(data-testo); position: absolute; left: 0; top: 0; white-space: nowrap; opacity: 0; pointer-events: none; }
+  .titolo h1::before { color: var(--neon-rosso); animation: glitch-a 4s infinite steps(1); }
+  .titolo h1::after { color: var(--neon-azzurro); animation: glitch-b 4s infinite steps(1); }
+  @keyframes glitch-a { 0%, 55%, 59%, 88%, 92%, 100% { opacity: 0; clip-path: inset(0 0 100% 0); transform: none; }
+    56% { opacity: 1; clip-path: inset(10% 0 60% 0); transform: translate(-6px, -1px); } 57% { clip-path: inset(50% 0 25% 0); transform: translate(4px, 1px); } 58% { clip-path: inset(75% 0 5% 0); transform: translate(-3px, 0); }
+    89% { opacity: 1; clip-path: inset(20% 0 55% 0); transform: translate(5px, 0); } 90.5% { clip-path: inset(60% 0 10% 0); transform: translate(-5px, 1px); } }
+  @keyframes glitch-b { 0%, 55.5%, 59.5%, 88.5%, 92.5%, 100% { opacity: 0; clip-path: inset(0 0 100% 0); transform: none; }
+    56.5% { opacity: 1; clip-path: inset(55% 0 20% 0); transform: translate(6px, 1px); } 57.5% { clip-path: inset(5% 0 70% 0); transform: translate(-4px, -1px); } 58.5% { clip-path: inset(35% 0 40% 0); transform: translate(3px, 0); }
+    89.5% { opacity: 1; clip-path: inset(65% 0 5% 0); transform: translate(-5px, 0); } 91% { clip-path: inset(15% 0 60% 0); transform: translate(5px, -1px); } }
+  .titolo .sotto { margin: 4px 0 0; font: 13px/1.4 var(--mono); color: var(--muted); }
+  .comandi { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+  .led { display: inline-flex; align-items: center; gap: 8px; font: 700 13px var(--display); letter-spacing: .12em; text-transform: uppercase; color: var(--testo-2);
+    border: var(--tratto) solid var(--bordo-forte); padding: 6px 12px; clip-path: polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px); }
+  .tasto.meteo { display: inline-flex; align-items: center; gap: 8px; text-transform: none; letter-spacing: .04em; font-weight: 600; cursor: default; }
+  .tasto.meteo:hover { background: transparent; color: var(--testo); border-color: var(--bordo-forte); }
+  .tasto.meteo b { font-weight: 800; white-space: nowrap; }
+  .tasto.meteo .simbolo { font-size: 16px; line-height: 1; }
+  .tasto.meteo .desc { white-space: nowrap; }
+  .led::before { content: ""; width: 9px; height: 9px; background: var(--ok); box-shadow: 0 0 calc(10px * var(--bagliore)) var(--ok); animation: sfarfallio 5s infinite; }
+  .led.att::before { background: var(--attenzione); box-shadow: 0 0 calc(10px * var(--bagliore)) var(--attenzione); }
+  .led.crit::before { background: var(--critico); box-shadow: 0 0 calc(10px * var(--bagliore)) var(--critico); }
+  .tasto { background: transparent; color: var(--testo); border: var(--tratto) solid var(--bordo-forte); padding: 6px 12px; cursor: pointer; text-decoration: none;
+    font: 700 13px var(--display); letter-spacing: .12em; text-transform: uppercase; clip-path: polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px); }
+  .tasto:hover { color: #05050a; background: var(--neon-azzurro); border-color: var(--neon-azzurro); }
+
+  /* striscia di stato: micro-testo tecnico e codice a barre decorativo */
+  .strip { display: flex; align-items: center; gap: 18px; font: 11px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--muted);
+    padding: 7px 0 9px; border-top: 1px solid var(--bordo); border-bottom: 1px solid var(--bordo-forte); margin-bottom: 14px; white-space: nowrap; overflow: hidden; }
+  .strip .barcode { flex: 1; min-width: 50px; height: 10px; opacity: .4;
+    background: repeating-linear-gradient(90deg, var(--testo-2) 0 1px, transparent 1px 3px, var(--testo-2) 3px 5px, transparent 5px 6px, var(--testo-2) 6px 7px, transparent 7px 11px); }
+  .strip b { color: var(--neon-rosa); font-weight: 400; }
+
+  /* ---------- avvisi ---------- */
+  .avvisi { display: grid; gap: 8px; margin: 0 0 14px; }
+  .avviso { display: flex; gap: 12px; align-items: flex-start; padding: 12px 16px; --accento: var(--muted); }
+  .avviso.critico { --accento: var(--critico); } .avviso.attenzione { --accento: var(--attenzione); } .avviso.info { --accento: var(--neon-blu); }
+  .avviso .icona { font: 700 11px var(--display); letter-spacing: .12em; padding: 3px 7px; background: var(--accento); color: #05050a; flex: none; margin-top: 2px; }
+  .avviso strong { display: block; font: 700 15px var(--display); letter-spacing: .04em; }
   .avviso span.testo { font-size: 13px; color: var(--testo-2); }
+  .errore { padding: 12px 14px; margin: 0 0 12px; --accento: var(--critico); font-family: var(--mono); font-size: 13px; }
 
-  /* filtri: una riga sopra tutto quello che governano */
-  .filtri { display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: center; margin: 14px 0 16px; font-size: 13px; }
-  .filtri .gruppo { display: flex; gap: 6px; align-items: center; }
-  .filtri .gruppo span { color: var(--muted); margin-right: 4px; }
-  .preset { background: var(--superficie); color: var(--testo-2); border: 1px solid var(--bordo);
-    border-radius: 6px; padding: 4px 10px; font: inherit; cursor: pointer; }
-  .preset:hover { background: color-mix(in srgb, var(--testo) 5%, var(--superficie)); }
-  .preset[aria-pressed="true"] { color: var(--testo); border-color: var(--testo-2); font-weight: 600; }
+  /* ---------- filtri e chip ---------- */
+  .gruppo { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 10px 0 4px; }
+  .gruppo span { font: 700 12px var(--display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-right: 6px; }
+  .preset, .chip { background: transparent; color: var(--testo-2); border: var(--tratto) solid var(--bordo-forte); padding: 4px 11px; cursor: pointer; white-space: nowrap;
+    font: 600 13px var(--display); letter-spacing: .06em; clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); }
+  .preset:hover { color: var(--testo); border-color: var(--neon-azzurro); }
+  .preset[aria-pressed="true"] { background: var(--neon-azzurro); color: #05050a; border-color: var(--neon-azzurro); font-weight: 700;
+    box-shadow: 0 0 calc(12px * var(--bagliore)) color-mix(in srgb, var(--neon-azzurro) 60%, transparent); }
+  .isola { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 10px 0 4px; }
+  .chip { --c: var(--testo-2); color: var(--c); border-color: color-mix(in srgb, var(--c) 70%, transparent); font-size: 12px; padding: 3px 10px; }
+  .chip:hover { border-color: var(--c); }
+  .chip[aria-pressed="true"] { background: var(--c); color: #05050a; border-color: var(--c); font-weight: 700; }
+  .chip.chip-zoom { margin-left: auto; --c: var(--neon-azzurro); }
+  .chip[hidden] { display: none; }
 
-  /* tessere con i numeri del giorno */
-  .kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(138px, 1fr)); gap: 10px; margin-bottom: 14px; }
-  .tessera { background: var(--superficie); border: 1px solid var(--bordo); border-radius: 10px; padding: 12px 14px; min-width: 0; }
-  .tessera .etichetta { font-size: 12px; color: var(--testo-2); }
-  .tessera .valore { font-size: 24px; font-weight: 600; margin: 2px 0 0; line-height: 1.2; }
-  .tessera .valore small { font-size: 13px; font-weight: 500; color: var(--testo-2); margin-left: 5px; }
-  .tessera .delta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  /* ---------- riga principale: numero del giorno + flusso ---------- */
+  .riga-eroe { display: grid; grid-template-columns: minmax(280px, 1fr) 1.5fr; gap: 12px; margin-bottom: 12px; }
+  .tessera { padding: 18px 18px 16px; }
+  .tessera .valore { font: 700 38px/1.05 var(--display); letter-spacing: 0; margin-top: 8px; font-variant-numeric: tabular-nums; }
+  .tessera .valore small { font: 600 14px var(--display); color: var(--accento, var(--s1)); margin-left: 6px; letter-spacing: .08em; text-transform: uppercase; }
+  .tessera .delta { font-size: 13px; color: var(--testo-2); margin-top: 6px; }
   .tessera .delta.su { color: var(--ok-testo); }
-  .tessera.eroe { grid-column: span 2; }
-  .tessera.eroe .valore { font-size: 48px; }
-  @media (max-width: 480px) { .tessera.eroe { grid-column: span 1; } .tessera.eroe .valore { font-size: 36px; } }
+  .tessera.eroe { --accento: var(--s1); display: flex; flex-direction: column; justify-content: center; }
+  .tessera.eroe .valore { font-size: 96px; letter-spacing: -.01em; }
+  .tessera.eroe .valore small { font-size: 20px; }
+  .barra { height: 8px; margin-top: 14px; background: color-mix(in srgb, var(--s1) 12%, transparent); position: relative;
+    -webkit-mask: repeating-linear-gradient(90deg, #000 0 9px, transparent 9px 12px); mask: repeating-linear-gradient(90deg, #000 0 9px, transparent 9px 12px); }
+  .barra > i { position: absolute; inset: 0 auto 0 0; background: var(--s1); box-shadow: 0 0 calc(10px * var(--bagliore)) var(--s1); }
+  .barra > b { display: none; }
 
-  /* schede dei grafici */
+  /* ---------- flusso di energia ---------- */
+  .flusso { width: 100%; height: auto; margin-top: 6px; display: block; }
+  .flusso .via { fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 5 11; opacity: .22; }
+  .flusso .linea.attiva .via { opacity: 1; animation: scorre 1.1s linear infinite; }
+  .flusso .linea.attiva.luce .via, .flusso .linea.attiva.luce .punta { filter: url(#alone); }
+  .flusso .linea.inverso .via { animation-direction: reverse; }
+  @keyframes scorre { to { stroke-dashoffset: -32; } }
+  .flusso .punta { display: none; fill: currentColor; }                                /* punta piena, mai sovrapposta al tratteggio */
+  .flusso .linea.attiva .punta.fine { display: block; }
+  .flusso .linea.attiva.inverso .punta.fine { display: none; }
+  .flusso .linea.attiva.inverso .punta.inizio { display: block; }
+  .flusso .nodo .corpo { fill: var(--superficie); stroke: var(--bordo-forte); stroke-width: var(--tratto-svg); stroke-linejoin: round; }
+  .flusso .nodo .dettaglio, .flusso .nodo .raggi line { fill: none; stroke: var(--bordo-forte); stroke-width: 1.4; stroke-linecap: round; }
+  .flusso .nodo .raggi line { stroke-width: 2.5; }
+  .flusso .nodo.attivo .corpo, .flusso .nodo.attivo .dettaglio, .flusso .nodo.attivo .raggi line { stroke: currentColor; }
+  .flusso .nodo.attivo.luce .corpo, .flusso .nodo.attivo.luce .raggi { filter: url(#alone); }
+  .flusso .nodo.attivo .raggi { animation: ruota 24s linear infinite; transform-box: fill-box; transform-origin: center; }
+  .flusso .livello { fill: currentColor; opacity: .22; }
+  .flusso .val.sole { font-size: 15px; }                                                  /* dentro il disco del sole c'è meno spazio */                                 /* carica della batteria: si riempie col SOC */
+  .flusso .nome { font: 700 12px var(--display); letter-spacing: .18em; fill: var(--muted); text-anchor: middle; }
+  .flusso .val { font: 700 19px var(--display); fill: var(--testo); text-anchor: middle; }
+  .flusso .dida { font: 12px var(--mono); fill: var(--muted); text-anchor: middle; }
+  .flusso .nodo.attivo .nome { fill: currentColor; }
+
+  /* ---------- tessere dei numeri del giorno ---------- */
+  .kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(196px, 1fr)); gap: 12px; margin-bottom: 12px; }
+
+  /* ---------- schede dei grafici ---------- */
   .griglia { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr)); gap: 12px; margin-bottom: 12px; }
-  .scheda { background: var(--superficie); border: 1px solid var(--bordo); border-radius: 10px; padding: 14px 14px 10px; min-width: 0; }
-  .scheda .grafico { position: relative; height: 260px; margin-top: 8px; }
-  .scheda.alta .grafico { height: 300px; }
-  body.aggiornando .grafico, body.aggiornando .kpi { opacity: .6; }   /* ricarica senza salti */
-  details { margin-top: 8px; font-size: 12px; }
-  summary { cursor: pointer; color: var(--muted); user-select: none; }
-  .tabella { overflow-x: auto; margin-top: 6px; }
-  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
-  th, td { text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--griglia); white-space: nowrap; }
-  th:first-child, td:first-child { text-align: left; }
-  th { color: var(--muted); font-weight: 500; }
+  .scheda { padding: 18px 18px 14px; }
+  .scheda .sotto { font-size: 13px; color: var(--testo-2); margin: 8px 0 8px; }
+  .scheda .grafico { position: relative; height: 280px; margin-top: 6px; }
+  .scheda.alta .grafico { height: 340px; }
+  body.aggiornando .grafico, body.aggiornando .kpi, body.aggiornando .flusso { opacity: .6; }
 
-  /* batteria */
+  /* tabelle: cornice al neon, intestazioni nel colore del pannello, righe pulite */
+  details { margin-top: 10px; }
+  summary { display: inline-block; list-style: none; cursor: pointer; user-select: none; font: 700 12px var(--display); letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accento, var(--s1)); border: 1px solid var(--accento, var(--s1)); padding: 4px 12px;
+    clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px); }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "▸ "; } details[open] summary::before { content: "▾ "; }
+  summary:hover { background: color-mix(in srgb, var(--accento, var(--s1)) 14%, transparent); }
+  .tabella { overflow-x: auto; margin-top: 10px; padding: 8px 10px; background: var(--superficie);
+    border: calc(var(--tratto) + .5px) solid var(--accento, var(--s1));
+    box-shadow: 0 0 calc(14px * var(--bagliore)) color-mix(in srgb, var(--accento, var(--s1)) 50%, transparent), inset 0 0 22px color-mix(in srgb, var(--accento, var(--s1)) 10%, transparent);
+    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
+  table { border-collapse: collapse; width: 100%; font: 13px var(--mono); font-variant-numeric: tabular-nums; }
+  th, td { text-align: right; padding: 6px 10px; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  th { font: 700 12px var(--display); letter-spacing: .12em; text-transform: uppercase; color: var(--accento, var(--s1)); border-bottom: 1px solid var(--accento, var(--s1)); }
+  td { border-bottom: 1px solid var(--griglia); color: var(--testo); }
+  tbody tr:hover td { background: color-mix(in srgb, var(--accento, var(--s1)) 10%, transparent); }
+
+  /* ---------- batteria ---------- */
   .batt { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px 14px; margin-top: 8px; }
-  .batt .etichetta { font-size: 12px; color: var(--testo-2); }
-  .batt .valore { font-size: 18px; font-weight: 600; }
-  .misuratore { height: 8px; border-radius: 4px; background: var(--s3-traccia); overflow: hidden; margin: 6px 0 2px; }
-  .misuratore > div { height: 100%; background: var(--s3); border-radius: 4px; }
+  .batt .etichetta { font: 600 12px var(--display); color: var(--muted); letter-spacing: .1em; text-transform: uppercase; }
+  .batt .valore { font: 700 22px var(--display); font-variant-numeric: tabular-nums; }
+  .misuratore { height: 8px; background: var(--s3-traccia); overflow: hidden; margin: 6px 0 2px;
+    -webkit-mask: repeating-linear-gradient(90deg, #000 0 9px, transparent 9px 12px); mask: repeating-linear-gradient(90deg, #000 0 9px, transparent 9px 12px); }
+  .misuratore > div { height: 100%; background: var(--s3); box-shadow: 0 0 calc(10px * var(--bagliore)) var(--s3); }
   .misuratore.bassa > div { background: var(--attenzione); }
 
-  footer { font-size: 12px; color: var(--muted); margin-top: 18px; line-height: 1.6; }
-  .errore { background: var(--superficie); border: 1px solid var(--critico); border-radius: 8px; padding: 12px; margin: 12px 0; }
+  footer { font: 12px/1.7 var(--mono); color: var(--muted); margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--bordo-forte); overflow-wrap: anywhere; }
+
+  /* ============ modalità TV / tablet: solo l'essenziale, grande ============ */
+  body.tv main { max-width: none; padding: 1.6vw 2.2vw; }
+  body.tv .gruppo, body.tv details, body.tv footer, body.tv .nascosto-tv, body.tv .strip, body.tv .isola { display: none; }
+  body.tv .tessera.eroe .valore { font-size: clamp(80px, 11vw, 190px); }
+  body.tv .tessera .valore { font-size: clamp(34px, 4vw, 60px); }
+  body.tv .et { font-size: clamp(18px, 1.6vw, 26px); }
+  body.tv .scheda .grafico, body.tv .scheda.alta .grafico { height: 36vh; }
+  body.tv .riga-eroe { grid-template-columns: 1fr 1.6fr; }
+
+  /* ============ modalità widget: un solo pannello, per incorporarlo altrove ============ */
+  body.widget main { max-width: none; padding: 8px; }
+  body.widget .testata, body.widget footer, body.widget .avvisi, body.widget .strip, body.widget .scan, body.widget .tear { display: none; }
+  body.widget main > :not(.attivo):not(:has(.attivo)) { display: none; }
+  body.widget .riga-eroe > :not(.attivo), body.widget .griglia > :not(.attivo) { display: none; }
+  body.widget .riga-eroe, body.widget .griglia, body.widget .kpi { display: grid; grid-template-columns: 1fr; margin: 0; }
+  body.trasparente, body.trasparente .sfondo { background: transparent; }
+  body.trasparente .sfondo::before, body.trasparente .sfondo::after { display: none; }
+
+  @media (max-width: 820px) {
+    .riga-eroe { grid-template-columns: 1fr; }
+    .tessera.eroe .valore { font-size: 72px; }
+    .testata { flex-wrap: wrap; } .comandi { margin-left: 0; width: 100%; justify-content: flex-start; }
+    .strip > span:nth-child(n+3):not(.barcode):not(:last-child) { display: none; }
+    .tasto.meteo .extra { display: none; }   /* su telefono il meteo mostra solo temperatura e condizione */
+    .et { font-size: 15px; }
+    .titolo h1 { font-size: 18px; letter-spacing: .01em; }
+
+    main { padding: 14px 14px 36px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .flusso .linea.attiva .via, .flusso .nodo.attivo .raggi, .logo-slot::before, .sfondo, .led::before, .titolo h1::before, .titolo h1::after, .scan, .tear { animation: none; }
+    .scan, .tear { display: none; }
+  }
 </style>
 <link rel="icon" href="data:,">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 </head>
 <body>
+<div class="sfondo" aria-hidden="true"></div>
+<div class="scan" aria-hidden="true"></div>
+<div class="tear" aria-hidden="true"></div>
 <main>
-  <header>
-    <h1>Fotovoltaico di casa</h1>
-    <p class="sotto" id="sottotitolo">Caricamento dei dati…</p>
+  <header class="testata">
+    <div class="marchio">
+      <div class="logo-slot" title="Spazio per il logo (il polpo)">LOGO</div>
+      <div class="titolo">
+        <h1 data-testo="Fotovoltaico Casa"><span class="parola">Fotovoltaico<i class="cut" style="left:23%"></i><i class="cut b" style="left:61%"></i></span><span class="blocco">Casa</span></h1>
+        <p class="sotto" id="sottotitolo">Caricamento dei dati…</p>
+      </div>
+    </div>
+    <div class="comandi">
+      <span class="tasto meteo" id="meteo" hidden title="Meteo nella posizione dell'impianto (Open-Meteo)"></span>
+      <span class="led" id="stato-led">in attesa</span>
+      <button class="tasto" id="tasto-tema" type="button" title="Tema: automatico, chiaro o scuro">tema</button>
+      <a class="tasto" id="tasto-tv" href="?tv=1" title="Vista a schermo intero per TV o tablet">TV</a>
+    </div>
   </header>
+  <div class="strip" aria-hidden="true">
+    <span>sys <b>//</b> sola lettura</span><span>nodo inv-01</span><span>link modbus·tcp/8899</span><span>campione 60 s</span>
+    <span class="barcode"></span><span id="strip-ora">—</span>
+  </div>
 
   <section class="avvisi" id="avvisi" aria-live="polite"></section>
 
-  <section class="filtri" aria-label="Intervalli">
-    <div class="gruppo" id="preset-ore"><span>Potenza, ultime ore</span></div>
-    <div class="gruppo" id="preset-giorni"><span>Giorni mostrati</span></div>
+  <section class="riga-eroe">
+    <div class="pannello tessera eroe" id="eroe" data-widget="eroe" data-tag="sys.pv // oggi"></div>
+    <section class="pannello scheda" data-widget="flusso" data-tag="flow // live" style="--accento: var(--s3)">
+      <div class="et">Flusso di energia adesso</div>
+      <svg class="flusso" viewBox="0 0 560 292" role="img" aria-label="Flusso di energia tra sole, casa, batteria e rete">
+        <defs>
+          <!-- filterUnits in coordinate assolute: con quelle relative un tracciato verticale o orizzontale ha riquadro nullo e sparisce -->
+          <filter id="alone" filterUnits="userSpaceOnUse" x="0" y="0" width="560" height="292"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <!-- linee: tratteggio che scorre, più una punta piena all'estremo verso cui va l'energia (il tratteggio si ferma prima) -->
+        <g class="linea" id="f-linea-pv" style="color: var(--s1)"><path class="via" d="M362 90 L326 134"/><path class="punta fine" d="M318 143 L330.3 137.6 L321.1 130 Z"/></g>
+        <g class="linea" id="f-linea-rete" style="color: var(--s4)"><path class="via" d="M144 194 H207"/><path class="punta fine" d="M220 194 L208 188 L208 200 Z"/><path class="punta inizio" d="M129 194 L141 188 L141 200 Z"/></g>
+        <g class="linea" id="f-linea-batt" style="color: var(--s3)"><path class="via" d="M353 194 H401"/><path class="punta fine" d="M414 194 L402 188 L402 200 Z"/><path class="punta inizio" d="M340 194 L352 188 L352 200 Z"/></g>
+        <!-- sole: disco con otto raggi, in alto a destra -->
+        <g class="nodo" id="f-nodo-pv" style="color: var(--s1)">
+          <g class="raggi"><line x1="392" y1="10" x2="392" y2="18"/><line x1="392" y1="90" x2="392" y2="98"/><line x1="348" y1="54" x2="356" y2="54"/><line x1="428" y1="54" x2="436" y2="54"/>
+            <line x1="360.9" y1="22.9" x2="366.5" y2="28.5"/><line x1="417.5" y1="79.5" x2="423.1" y2="85.1"/><line x1="360.9" y1="85.1" x2="366.5" y2="79.5"/><line x1="417.5" y1="28.5" x2="423.1" y2="22.9"/></g>
+          <circle class="corpo" cx="392" cy="54" r="30"/><text class="nome" x="392" y="50">SOLE</text><text class="val sole" id="f-pv" x="392" y="68">–</text></g>
+        <!-- casa: tetto a punta, linea di gronda e pareti -->
+        <g class="nodo" id="f-nodo-casa" style="color: var(--s2)">
+          <path class="corpo" d="M222 166 L280 124 L338 166 V230 H222 Z"/><path class="dettaglio" d="M222 166 H338"/>
+          <text class="nome" x="280" y="188">CASA</text><text class="val" id="f-casa" x="280" y="211">–</text></g>
+        <!-- batteria: corpo, polo e livello di carica che si riempie col SOC -->
+        <g class="nodo" id="f-nodo-batt" style="color: var(--s3)">
+          <rect class="corpo" x="420" y="168" width="108" height="54" rx="5"/><rect class="corpo polo" x="528" y="185" width="8" height="20" rx="2"/>
+          <rect class="livello" id="f-batt-livello" x="424" y="172" width="0" height="46" rx="3"/>
+          <text class="nome" x="474" y="189">BATTERIA</text><text class="val" id="f-batt" x="474" y="211">–</text></g>
+        <!-- rete: torre a graticcio alta, con punta, due traverse con isolatori e crociere -->
+        <g class="nodo" id="f-nodo-rete" style="color: var(--s4)">
+          <path class="corpo" d="M26 230 L74 84 H92 L140 230 Z"/>
+          <path class="dettaglio" d="M83 84 V72 M40 104 H126 M42 104 V113 M124 104 V113 M48 128 H118 M50 128 V137 M116 128 V137 M74 84 L97.3 100 L63.5 116 L107.8 132 L53 148 L118.3 164 L43.7 176 M92 84 L68.7 100 L102.5 116 L58.2 132 L113 148 L47.7 164 L122.3 176 M43.7 176 H122.3"/>
+          <text class="nome" x="83" y="198">RETE</text><text class="val" id="f-rete" x="83" y="220">–</text></g>
+        <text class="dida" id="f-rete-dida" x="83" y="252"></text>
+        <text class="dida" id="f-casa-dida" x="280" y="252"></text>
+        <text class="dida" id="f-batt-dida" x="474" y="252"></text>
+        <text class="dida" id="f-pv-dida" x="280" y="280"></text>
+      </svg>
+    </section>
   </section>
 
-  <section class="kpi" id="kpi" aria-label="Numeri di oggi"></section>
+  <section class="kpi" id="kpi" aria-label="Numeri di oggi" data-widget="kpi"></section>
 
-  <section class="scheda alta">
-    <h2 id="titolo-potenza">Potenza nelle ultime ore</h2>
-    <div class="sotto">Fotovoltaico, casa, batteria (positivo = in carica) e rete (positivo = immissione, negativo = prelievo), in kW</div>
+  <section class="pannello scheda alta" data-widget="potenza" data-tag="pwr // serie" style="--accento: var(--s1)">
+    <div class="et" id="titolo-potenza">Potenza nelle ultime ore</div>
+    <div class="gruppo" id="preset-ore"><span>Intervallo</span></div>
+    <div class="sotto">Fotovoltaico, casa, batteria (positivo = in carica) e rete (positivo = immissione, negativo = prelievo), in kW. Trascina sul grafico per ingrandire un intervallo, Ctrl + rotella per lo zoom, Maiusc + trascina per spostarti; i pulsanti qui sotto mostrano una linea sola.</div>
+    <div class="isola" id="isola-potenza" aria-label="Mostra solo una linea"></div>
     <div class="grafico"><canvas id="g-potenza"></canvas></div>
-    <details><summary>Tabella</summary><div class="tabella" id="t-potenza"></div></details>
+    <details><summary>Tabella dati</summary><div class="tabella" id="t-potenza"></div></details>
   </section>
 
-  <section class="griglia">
-    <section class="scheda">
-      <h2>Produzione per giorno</h2>
+  <section class="griglia nascosto-tv">
+    <section class="pannello scheda" data-widget="giorni" data-tag="day // kwh" style="--accento: var(--s1)">
+      <div class="et">Produzione per giorno</div>
+      <div class="gruppo" id="preset-giorni"><span>Giorni mostrati (vale anche per il consumo)</span></div>
       <div class="sotto">Energia prodotta divisa tra autoconsumata (anche in batteria) e immessa in rete; la linea grigia è l'attesa PVGIS</div>
       <div class="grafico"><canvas id="g-giorni"></canvas></div>
       <details><summary>Tabella dei giorni</summary><div class="tabella" id="t-giorni"></div></details>
     </section>
-    <section class="scheda">
-      <h2>Consumo per giorno</h2>
+    <section class="pannello scheda" data-widget="consumo" data-tag="load // kwh" style="--accento: var(--s2)">
+      <div class="et">Consumo per giorno</div>
       <div class="sotto">Consumo di casa diviso tra coperto da fotovoltaico e batteria e prelevato dalla rete</div>
       <div class="grafico"><canvas id="g-consumo"></canvas></div>
-      <details><summary>Tabella</summary><div class="tabella" id="t-consumo"></div></details>
+      <details><summary>Tabella dati</summary><div class="tabella" id="t-consumo"></div></details>
     </section>
   </section>
 
   <section class="griglia">
-    <section class="scheda">
-      <h2>Produzione per mese</h2>
+    <section class="pannello scheda nascosto-tv" data-widget="mesi" data-tag="month // kwh" style="--accento: var(--s1)">
+      <div class="et">Produzione per mese</div>
       <div class="sotto">Somma dei giorni con dati; il punto grigio è l'attesa PVGIS per quegli stessi giorni</div>
       <div class="grafico"><canvas id="g-mesi"></canvas></div>
       <details><summary>Tabella dei mesi</summary><div class="tabella" id="t-mesi"></div></details>
     </section>
-    <section class="scheda">
-      <h2>Batteria</h2>
+    <section class="pannello scheda" data-widget="batteria" data-tag="batt // hv" style="--accento: var(--s3)">
+      <div class="et">Batteria</div>
       <div class="sotto" id="batt-sotto">Stato dall'ultima lettura</div>
       <div class="batt" id="batt"></div>
       <div class="grafico" style="height:170px"><canvas id="g-soc"></canvas></div>
-      <details><summary>Tabella</summary><div class="tabella" id="t-soc"></div></details>
+      <details><summary>Tabella dati</summary><div class="tabella" id="t-soc"></div></details>
     </section>
   </section>
 
@@ -161,8 +442,38 @@
   "use strict";
   const $ = (id) => document.getElementById(id);
   const css = (nome) => getComputedStyle(document.documentElement).getPropertyValue(nome).trim();
+  const scuro = () => document.documentElement.dataset.theme !== "light";
   const MESI = ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"];
-  const stato = { ore: 12, giorni: 31, dati: null, grafici: {}, timer: null };
+  const stato = { ore: 12, giorni: 31, dati: null, grafici: {}, timer: null, zoom: {}, isola: {} };
+  const parametri = new URLSearchParams(location.search);
+
+  // ---------- modalità della pagina: normale, TV, widget ----------
+  if (parametri.get("tv") === "1") { document.body.classList.add("tv"); $("tasto-tv").href = location.pathname; $("tasto-tv").textContent = "esci da TV"; }
+  const widget = parametri.get("widget");
+  if (widget) {
+    document.body.classList.add("widget");
+    for (const s of document.querySelectorAll("[data-widget]")) s.classList.toggle("attivo", s.dataset.widget === widget);
+    if (parametri.get("sfondo") === "trasparente") document.body.classList.add("trasparente");
+  }
+
+  // ---------- tema: auto (segue Windows), chiaro, scuro ----------
+  const TEMI = ["auto", "light", "dark"];
+  const ETICHETTE = { auto: "tema: auto", light: "tema: chiaro", dark: "tema: scuro" };
+  function applicaTema(scelto) {
+    const reso = scelto === "auto" ? (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark") : scelto;
+    document.documentElement.dataset.theme = reso;
+    document.documentElement.dataset.temaScelto = scelto;
+    $("tasto-tema").textContent = ETICHETTE[scelto];
+    try { localStorage.setItem("tema", scelto); } catch (e) { /* senza memoria locale si parte sempre da auto */ }
+    if (stato.dati) render(stato.dati);
+  }
+  $("tasto-tema").textContent = ETICHETTE[document.documentElement.dataset.temaScelto || "auto"];
+  $("tasto-tema").addEventListener("click", () => {
+    const attuale = document.documentElement.dataset.temaScelto || "auto";
+    applicaTema(TEMI[(TEMI.indexOf(attuale) + 1) % TEMI.length]);
+  });
+  const schema = window.matchMedia("(prefers-color-scheme: light)");
+  if (schema.addEventListener) schema.addEventListener("change", () => applicaTema(document.documentElement.dataset.temaScelto || "auto"));
 
   // ---------- formattazione (italiano) ----------
   const num = (v, dec = 1) => (v == null || Number.isNaN(v)) ? "–"
@@ -210,7 +521,7 @@
   presets($("preset-ore"), [3, 6, 12, 24], "ore", " h");
   presets($("preset-giorni"), [7, 31, 90], "giorni", " giorni");
 
-  // ---------- plugin Chart.js: mirino verticale e etichette di fine linea ----------
+  // ---------- plugin Chart.js: mirino, etichette di fine linea, alone neon ----------
   const mirino = {
     id: "mirino",
     afterDraw(chart) {
@@ -234,25 +545,58 @@
         let j = ds.data.length - 1;
         while (j >= 0 && ds.data[j] == null) j--;
         if (j < 0) return;
-        voci.push({ testo: ds.label, x: meta.data[j].x, y0: meta.data[j].y, y: meta.data[j].y });
+        voci.push({ testo: ds.label, colore: ds.borderColor, x: meta.data[j].x, y0: meta.data[j].y, y: meta.data[j].y });
       });
       voci.sort((p, q) => p.y - q.y);
       for (let k = 1; k < voci.length; k++) if (voci[k].y - voci[k - 1].y < 14) voci[k].y = voci[k - 1].y + 14;
       const { ctx } = chart;
       ctx.save();
-      ctx.font = "600 11px system-ui, -apple-system, 'Segoe UI', sans-serif";
-      ctx.fillStyle = css("--testo-2"); ctx.strokeStyle = css("--asse"); ctx.lineWidth = 1; ctx.textBaseline = "middle";
+      ctx.font = "600 11px " + css("--mono");
+      ctx.strokeStyle = css("--asse"); ctx.lineWidth = 1; ctx.textBaseline = "middle";
       for (const v of voci) {
         if (Math.abs(v.y - v.y0) > 1) { ctx.beginPath(); ctx.moveTo(v.x + 2, v.y0); ctx.lineTo(v.x + 6, v.y); ctx.stroke(); }
-        ctx.fillText(v.testo, v.x + 8, v.y);
+        ctx.fillStyle = v.colore; ctx.fillText(v.testo, v.x + 8, v.y);
       }
       ctx.restore();
     },
   };
-  Chart.register(mirino, etichetteFinali);
+  const alone = {   // bagliore neon sulle linee, solo nel tema scuro
+    id: "alone",
+    beforeDatasetDraw(chart, args) {
+      if (!chart.options.alone) return;
+      const ds = chart.data.datasets[args.index];
+      if (ds.type !== "line") return;
+      chart.ctx.save(); chart.ctx.shadowColor = ds.borderColor; chart.ctx.shadowBlur = 6;
+    },
+    afterDatasetDraw(chart, args) {
+      if (!chart.options.alone) return;
+      if (chart.data.datasets[args.index].type !== "line") return;
+      chart.ctx.restore();
+    },
+  };
+  const cappello = {   // linea luminosa in cima a ogni segmento di barra: le barre diventano "a lamelle"
+    id: "cappello",
+    afterDatasetsDraw(chart) {
+      const { ctx } = chart;
+      chart.data.datasets.forEach((ds, i) => {
+        if (ds.type !== "bar" || !chart.isDatasetVisible(i)) return;
+        const meta = chart.getDatasetMeta(i);
+        ctx.save(); ctx.strokeStyle = ds.borderColor; ctx.lineWidth = 2;
+        if (chart.options.alone) { ctx.shadowColor = ds.borderColor; ctx.shadowBlur = 8; }
+        for (const b of meta.data) {
+          if (!(b.base - b.y > 3)) continue;
+          ctx.beginPath(); ctx.moveTo(b.x - b.width / 2, b.y); ctx.lineTo(b.x + b.width / 2, b.y); ctx.stroke();
+        }
+        ctx.restore();
+      });
+    },
+  };
+  Chart.register(mirino, etichetteFinali, alone, cappello);
+  if (window.ChartZoom) Chart.register(window.ChartZoom);   // zoom e scorrimento (plugin esterno, se caricato)
 
   // ---------- opzioni comuni dei grafici ----------
   function opzioni(formatoY, extra = {}) {
+    Chart.defaults.font.family = css("--mono");
     return {
       responsive: true, maintainAspectRatio: false, animation: false,
       interaction: { mode: "index", intersect: false },
@@ -260,91 +604,198 @@
       plugins: {
         legend: {
           display: extra.legenda !== false, position: "top", align: "start",
-          labels: { usePointStyle: true, boxWidth: 10, boxHeight: 10, padding: 14, color: css("--testo-2"), font: { size: 12 },
+          labels: { usePointStyle: true, boxWidth: 10, boxHeight: 10, padding: 14, color: css("--testo-2"), font: { size: 11 },
                     sort: (a, b) => a.datasetIndex - b.datasetIndex },
         },
         tooltip: {
           usePointStyle: true, backgroundColor: css("--tooltip"), titleColor: css("--testo"), bodyColor: css("--testo"),
-          borderColor: css("--bordo"), borderWidth: 1, padding: 10, boxPadding: 4,
+          borderColor: css("--bordo-forte"), borderWidth: 1, padding: 10, boxPadding: 4, cornerRadius: 0,
           callbacks: { label: (c) => " " + formatoY(c.parsed.y) + "  " + c.dataset.label },
         },
+        zoom: extra.zoom ? {
+          zoom: { drag: { enabled: true, backgroundColor: alfa(css("--neon-azzurro"), 0.18), borderColor: css("--neon-azzurro"), borderWidth: 1 },
+                  wheel: { enabled: true, modifierKey: "ctrl" }, pinch: { enabled: true }, mode: "x",
+                  onZoomComplete: ({ chart }) => { stato.zoom[extra.zoom] = { min: chart.scales.x.min, max: chart.scales.x.max }; chipZoom(extra.zoom); } },
+          pan: { enabled: true, mode: "x", modifierKey: "shift",
+                 onPanComplete: ({ chart }) => { stato.zoom[extra.zoom] = { min: chart.scales.x.min, max: chart.scales.x.max }; } },
+          limits: { x: { minRange: 5 } },
+        } : { zoom: { wheel: { enabled: false }, drag: { enabled: false }, pinch: { enabled: false } }, pan: { enabled: false } },
       },
       scales: {
         x: { grid: { display: false }, border: { color: css("--asse") },
-             ticks: { color: css("--muted"), maxTicksLimit: 9, maxRotation: 0, autoSkip: true, font: { size: 11 } } },
+             ticks: { color: css("--muted"), maxTicksLimit: 9, maxRotation: 0, autoSkip: true, autoSkipPadding: 28, font: { size: 11 } } },
         y: { beginAtZero: true, grid: { color: css("--griglia"), lineWidth: 1 }, border: { display: false },
              ticks: { color: css("--muted"), font: { size: 11 }, maxTicksLimit: 6, callback: (v) => formatoY(v) },
              ...(extra.y || {}) },
       },
-      mirino: !!extra.mirino, etichetteFinali: !!extra.etichetteFinali,
+      mirino: !!extra.mirino, etichetteFinali: !!extra.etichetteFinali, alone: scuro(),
     };
   }
   function linea(label, data, colore, extra = {}) {
-    return { type: "line", label, data, borderColor: colore, backgroundColor: extra.area ? alfa(colore, 0.1) : colore,
+    return { type: "line", label, data, borderColor: colore, backgroundColor: extra.area ? alfa(colore, 0.14) : colore,
       fill: !!extra.area, borderWidth: 2, pointRadius: 0, pointHoverRadius: 5, pointHoverBorderWidth: 2,
       pointHoverBorderColor: css("--superficie"), pointHoverBackgroundColor: colore, pointStyle: "line",
-      tension: 0.15, spanGaps: true, ...(extra.dataset || {}) };
+      tension: 0.2, spanGaps: true, ...(extra.dataset || {}) };
   }
-  function barre(label, data, colore, stack, ultimo) {
-    return { type: "bar", label, data, backgroundColor: colore, stack, pointStyle: "rect",
-      borderColor: css("--superficie"), borderWidth: { top: 2, left: 0, right: 0, bottom: 0 }, borderSkipped: false,
-      maxBarThickness: 24,
-      // 4px di raggio solo sulla cima della pila: sul segmento alto, o su quello basso se sopra non c'è niente
-      borderRadius: (ctx) => (ultimo || !ctx.chart.data.datasets.some((d, i) => i > ctx.datasetIndex && d.stack === stack && d.data[ctx.dataIndex] > 0)) ? { topLeft: 4, topRight: 4 } : 0 };
+  const motivi = {};
+  function motivo(colore) {   // tessera 8x8 con strisce diagonali nel colore della serie
+    if (!motivi[colore]) {
+      const t = document.createElement("canvas"); t.width = t.height = 8;
+      const x = t.getContext("2d"); x.strokeStyle = colore; x.lineWidth = 2; x.lineCap = "square";
+      x.beginPath(); x.moveTo(-2, 10); x.lineTo(10, -2); x.moveTo(-2, 2); x.lineTo(2, -2); x.moveTo(6, 10); x.lineTo(10, 6); x.stroke();
+      motivi[colore] = x.createPattern(t, "repeat");
+    }
+    return motivi[colore];
+  }
+  function barre(label, data, colore, stack, ultimo, stile = "pieno") {
+    // "pieno": sfumatura dal colore pieno in alto al quasi trasparente in basso; "righe": strisce diagonali
+    const riempimento = stile === "righe"
+      ? () => motivo(colore)
+      : (c) => { const a = c.chart.chartArea; if (!a) return alfa(colore, 0.5);
+                 const g = c.chart.ctx.createLinearGradient(0, a.top, 0, a.bottom);
+                 g.addColorStop(0, alfa(colore, 0.9)); g.addColorStop(1, alfa(colore, 0.08)); return g; };
+    return { type: "bar", label, data, backgroundColor: riempimento, borderColor: colore, stack, pointStyle: "rect",
+      borderWidth: 1, borderSkipped: false, maxBarThickness: 30, borderRadius: 0 };
   }
   function disegna(id, config) {
     if (stato.grafici[id]) { stato.grafici[id].destroy(); }
-    stato.grafici[id] = new Chart($(id).getContext("2d"), config);
+    const chart = new Chart($(id).getContext("2d"), config);
+    stato.grafici[id] = chart;
+    if (stato.zoom[id] && chart.zoomScale) chart.zoomScale("x", stato.zoom[id], "none");   // lo zoom sopravvive all'aggiornamento al minuto
+    if (stato.isola[id] != null) applicaIsola(id);
+    return chart;
   }
+  // ---------- una linea sola, e pulsante per tornare dallo zoom ----------
+  function applicaIsola(id) {
+    const chart = stato.grafici[id], sel = stato.isola[id];
+    chart.data.datasets.forEach((_, i) => chart.setDatasetVisibility(i, sel == null || i === sel));
+    chart.update("none");
+  }
+  function chipZoom(id) {
+    const c = document.querySelector(`#isola-${id.replace("g-", "")} .chip-zoom`);
+    if (c) c.hidden = !stato.zoom[id];
+  }
+  function chipsIsola(id, contenitoreId) {
+    const chart = stato.grafici[id];
+    const box = svuota($(contenitoreId));
+    const voci = [["Tutte", null, css("--testo-2")], ...chart.data.datasets.map((ds, i) => [ds.label, i, ds.borderColor])];
+    for (const [testo, sel, colore] of voci) {
+      const b = el("button", { class: "chip", type: "button", text: testo, style: `--c: ${colore}`,
+        "aria-pressed": String((stato.isola[id] == null ? null : stato.isola[id]) === sel) });
+      b.addEventListener("click", () => {
+        stato.isola[id] = sel; applicaIsola(id);
+        for (const x of box.querySelectorAll(".chip:not(.chip-zoom)")) x.setAttribute("aria-pressed", "false");
+        b.setAttribute("aria-pressed", "true");
+      });
+      box.append(b);
+    }
+    const z = el("button", { class: "chip chip-zoom", type: "button", text: "↺ zoom" });
+    z.hidden = !stato.zoom[id];
+    z.addEventListener("click", () => { delete stato.zoom[id]; if (chart.resetZoom) chart.resetZoom("none"); z.hidden = true; });
+    box.append(z);
+  }
+
+  // ---------- flusso di energia: linee che scorrono nel verso del flusso ----------
+  function flusso(u, b) {
+    const soglia = 50;    // sotto 50 W consideriamo il flusso fermo
+    const pv = u ? u.pv_w : null, casa = u ? u.carico_w : null, rete = u ? u.rete_w : null, bp = b ? b.potenza_w : null;
+    const via = (id, attiva, inverso) => {
+      const p = $(id); p.classList.toggle("attiva", !!attiva); p.classList.toggle("inverso", !!inverso); p.classList.toggle("luce", scuro());
+    };
+    const nodo = (id, attivo) => { const n = $(id); n.classList.toggle("attivo", !!attivo); n.classList.toggle("luce", scuro()); };
+    $("f-pv").textContent = kw(pv);
+    $("f-casa").textContent = kw(casa);
+    $("f-rete").textContent = rete == null ? "–" : kw(Math.abs(rete));
+    $("f-batt").textContent = b ? `${num(b.soc, 0)} %` : "–";
+    $("f-batt-livello").setAttribute("width", b && b.soc != null ? Math.max(0, Math.min(100, b.soc)) : 0);   // 100 unità = corpo pieno
+    via("f-linea-pv", pv != null && pv > soglia, false);
+    via("f-linea-batt", bp != null && Math.abs(bp) > soglia, bp != null && bp < 0);        // negativo = scarica: verso casa
+    via("f-linea-rete", rete != null && Math.abs(rete) > soglia, rete != null && rete > 0); // positivo = immissione: verso rete
+    nodo("f-nodo-pv", pv != null && pv > soglia);
+    nodo("f-nodo-casa", casa != null && casa > soglia);
+    nodo("f-nodo-batt", bp != null && Math.abs(bp) > soglia);
+    nodo("f-nodo-rete", rete != null && Math.abs(rete) > soglia);
+    $("f-batt-dida").textContent = b ? (Math.abs(bp || 0) > soglia ? `${b.verso} ${kw(Math.abs(bp))}` : "ferma") : "";
+    $("f-rete-dida").textContent = rete == null ? "" : Math.abs(rete) <= soglia ? "in equilibrio" : rete > 0 ? "immissione" : "prelievo";
+    $("f-casa-dida").textContent = casa == null ? "" : "consumo di casa";
+    $("f-pv-dida").textContent = u ? (u.minuti_fa <= 10 ? `aggiornato ${u.minuti_fa} min fa` : `ultima lettura ${u.ora_locale}`) : "";
+  }
+
+  // ---------- logo: un cerchio alto quanto titolo più sottotitolo, mai deformato ----------
+  function dimensionaLogo() {
+    const lato = Math.max(40, Math.round(document.querySelector(".titolo").getBoundingClientRect().height));
+    const logo = document.querySelector(".logo-slot");
+    logo.style.width = logo.style.height = lato + "px";
+  }
+  window.addEventListener("resize", dimensionaLogo);
 
   // ---------- rendering ----------
   function render(d) {
     const u = d.ultima_lettura;
     $("sottotitolo").textContent = u
-      ? `Ultima lettura ${u.ora_locale} (${u.minuti_fa} min fa) · inverter: ${u.stato_testo} · produzione totale dall'installazione ${num(u.energia_totale_kwh / 1000, 1)} MWh · la pagina si aggiorna da sola ogni minuto`
-      : "Nessuna lettura nel database";
+      ? `ultima lettura ${u.ora_locale} (${u.minuti_fa} min fa) · aggiornamento automatico ogni minuto`
+      : "nessuna lettura nel database";
+    $("strip-ora").textContent = u ? `t ${u.ora_locale.slice(-5)} · ${u.minuti_fa} min` : "t --:--";
+    const mt = $("meteo"), w = d.meteo;
+    if (w && w.temperatura_c != null) {
+      svuota(mt).append(el("span", { class: "simbolo", text: w.simbolo }), el("b", { text: `${num(w.temperatura_c, 0)} °C` }),
+        el("span", { class: "desc", text: w.descrizione }),
+        el("span", { class: "extra", text: `· min ${num(w.t_min_c, 0)}° max ${num(w.t_max_c, 0)}°` + (w.alba ? ` · ☼ ${w.alba}–${w.tramonto}` : "") }));
+      mt.hidden = false;
+    } else { mt.hidden = true; }
+    dimensionaLogo();
+    const led = $("stato-led");
+    led.textContent = u ? u.stato_testo : "senza dati";
+    led.className = "led " + (!u ? "crit" : (u.minuti_fa > 10 ? "att" : (/guast|fault|errore/i.test(u.stato_testo) ? "crit" : "")));
 
     // avvisi
     const av = svuota($("avvisi"));
-    const icone = { critico: "⛔", attenzione: "⚠️", info: "ℹ️" };
+    const icone = { critico: "ERR", attenzione: "ATT", info: "INFO" };
     const titoli = { nessuna_lettura: "Inverter non raggiunto", nessun_dato: "Database vuoto", inverter_guasto: "Guasto inverter", produzione_bassa: "Produzione sotto l'attesa" };
     for (const a of d.avvisi) {
-      av.append(el("div", { class: "avviso " + a.livello, role: "alert" }, el("span", { class: "icona", text: icone[a.livello] || "•" }),
+      av.append(el("div", { class: "pannello avviso " + a.livello, role: "alert" }, el("span", { class: "icona", text: icone[a.livello] || "•" }),
         el("div", {}, el("strong", { text: titoli[a.codice] || a.codice }), el("span", { class: "testo", text: a.testo }))));
     }
     if (!d.attesa.configurata) {
-      av.append(el("div", { class: "avviso info" }, el("span", { class: "icona", text: icone.info }),
+      av.append(el("div", { class: "pannello avviso info" }, el("span", { class: "icona", text: icone.info }),
         el("div", {}, el("strong", { text: "Produzione attesa non disponibile" }), el("span", { class: "testo", text: "PVGIS " + (d.attesa.info.errore || "non configurato") }))));
     } else if (d.attesa.info.avviso) {
-      av.append(el("div", { class: "avviso info" }, el("span", { class: "icona", text: icone.info }),
+      av.append(el("div", { class: "pannello avviso info" }, el("span", { class: "icona", text: icone.info }),
         el("div", {}, el("strong", { text: "PVGIS" }), el("span", { class: "testo", text: d.attesa.info.avviso }))));
     }
 
-    // tessere di oggi
+    // numero del giorno
     const o = d.oggi || {};
+    const e = svuota($("eroe"));
+    e.append(el("div", { class: "et", text: "Prodotta oggi" }));
+    e.append(el("div", { class: "valore", text: num(o.prodotta) }, el("small", { text: "kWh" })));
+    if (o.attesa != null && o.prodotta != null) {
+      const scarto = 100 * (o.prodotta - o.attesa) / o.attesa;
+      e.append(el("div", { class: "delta " + (scarto >= 0 ? "su" : ""), text: `attesa PVGIS ${kwh(o.attesa)} (${scarto >= 0 ? "+" : ""}${num(scarto, 0)} %)` }));
+      e.append(el("div", { class: "barra" }, el("i", { style: `width:${Math.max(0, Math.min(100, 100 * o.prodotta / o.attesa))}%` }), el("b")));
+    } else {
+      e.append(el("div", { class: "delta", text: d.attesa.configurata ? "attesa PVGIS non calcolabile" : "attesa PVGIS: non configurata" }));
+    }
+
+    // flusso
+    flusso(u, d.batteria);
+
+    // tessere di oggi
     const k = svuota($("kpi"));
-    function tessera(etichetta, valore, unita, delta, classe = "") {
-      const t = el("div", { class: "tessera " + classe }, el("div", { class: "etichetta", text: etichetta }),
+    function tessera(etichetta, valore, unita, delta, accento, tag) {
+      const t = el("div", { class: "pannello tessera", style: `--accento: ${accento}` }, el("div", { class: "et", text: etichetta }),
         el("div", { class: "valore", text: valore }, unita ? el("small", { text: unita }) : null));
       if (delta) t.append(el("div", { class: "delta " + (delta.su ? "su" : ""), text: delta.testo }));
       return t;
     }
-    let deltaAttesa = null;
-    if (o.attesa != null && o.prodotta != null) {
-      const scarto = 100 * (o.prodotta - o.attesa) / o.attesa;
-      deltaAttesa = { su: scarto >= 0, testo: `attesa PVGIS ${kwh(o.attesa)} (${scarto >= 0 ? "+" : ""}${num(scarto, 0)} %)` };
-    } else {
-      deltaAttesa = { su: false, testo: d.attesa.configurata ? "attesa PVGIS non calcolabile" : "attesa PVGIS: non configurata" };
-    }
-    k.append(tessera("Prodotta oggi", num(o.prodotta), "kWh", deltaAttesa, "eroe"));
-    k.append(tessera("Consumo di casa oggi", num(o.consumata), "kWh", { testo: o.autosufficienza != null ? `${kwh(o.autosufficienza)} senza rete` : "" }));
-    k.append(tessera("Autoconsumo", pct(o.autoconsumo_pct), "", { testo: o.autoconsumo != null ? `${kwh(o.autoconsumo)} non immessi` : "della produzione" }));
-    k.append(tessera("Autosufficienza", pct(o.autosufficienza_pct), "", { testo: "del consumo coperto senza rete" }));
-    k.append(tessera("Immessa in rete oggi", num(o.immessa), "kWh", { testo: `prelevata ${kwh(o.prelevata)}` }));
-    const recente = u && u.minuti_fa <= 10;          // oltre 10 minuti i valori "adesso" sono vecchi
+    k.append(tessera("Consumo di casa oggi", num(o.consumata), "kWh", { testo: o.autosufficienza != null ? `${kwh(o.autosufficienza)} senza rete` : "" }, "var(--s2)", "kpi.01"));
+    k.append(tessera("Autoconsumo", pct(o.autoconsumo_pct), "", { testo: o.autoconsumo != null ? `${kwh(o.autoconsumo)} non immessi` : "della produzione" }, "var(--s1)", "kpi.02"));
+    k.append(tessera("Autosufficienza", pct(o.autosufficienza_pct), "", { testo: "del consumo coperto senza rete" }, "var(--s3)", "kpi.03"));
+    k.append(tessera("Immessa in rete oggi", num(o.immessa), "kWh", { testo: `prelevata ${kwh(o.prelevata)}` }, "var(--s4)", "kpi.04"));
+    const recente = u && u.minuti_fa <= 10;
     const quando = recente ? "adesso" : "all'ultima lettura";
-    k.append(tessera(`Fotovoltaico ${quando}`, u ? num(u.pv_w / 1000, 2) : "–", "kW", { testo: u ? `casa ${kw(u.carico_w)}, rete ${kw(u.rete_w)}` : "" }));
-    k.append(tessera(`Batteria ${quando}`, d.batteria ? num(d.batteria.soc, 0) : "–", "%", { testo: d.batteria ? `${d.batteria.verso} ${kw(Math.abs(d.batteria.potenza_w || 0))}` : "" }));
+    k.append(tessera(`Fotovoltaico ${quando}`, u ? num(u.pv_w / 1000, 2) : "–", "kW", { testo: u ? `casa ${kw(u.carico_w)}, rete ${kw(u.rete_w)}` : "" }, "var(--s1)", "pv // live"));
+    k.append(tessera(`Batteria ${quando}`, d.batteria ? num(d.batteria.soc, 0) : "–", "%", { testo: d.batteria ? `${d.batteria.verso} ${kw(Math.abs(d.batteria.potenza_w || 0))}` : "" }, "var(--s3)", "batt // live"));
 
     // potenza nelle ultime ore
     $("titolo-potenza").textContent = `Potenza nelle ultime ${d.parametri.ore} ore`;
@@ -354,8 +805,9 @@
       data: { labels: p.map((x) => x.ora), datasets: [
         linea("Fotovoltaico", inKw("pv_w"), css("--s1")), linea("Casa", inKw("carico_w"), css("--s2")),
         linea("Batteria", inKw("batteria_w"), css("--s3")), linea("Rete", inKw("rete_w"), css("--s4")) ] },
-      options: opzioni((v) => num(v, 1) + " kW", { mirino: true, etichetteFinali: true, y: { beginAtZero: false } }),
+      options: opzioni((v) => num(v, 1) + " kW", { mirino: true, etichetteFinali: true, zoom: "g-potenza", y: { beginAtZero: false } }),
     });
+    chipsIsola("g-potenza", "isola-potenza");
     tabella($("t-potenza"), ["Ora", "Fotovoltaico", "Casa", "Batteria", "Rete", "Batteria %"],
       p.slice().reverse().map((x) => [x.ora, kw(x.pv_w), kw(x.carico_w), kw(x.batteria_w), kw(x.rete_w), num(x.soc, 0)]));
 
@@ -364,8 +816,8 @@
     const etichetteG = g.map((x) => ggmm(x.data));
     const conAttesa = g.some((x) => x.attesa != null);
     const dsProd = [barre("Autoconsumata", g.map((x) => x.autoconsumo), css("--s1"), "p", false),
-                    barre("Immessa in rete", g.map((x) => x.immessa), css("--s4"), "p", true)];
-    if (conAttesa) dsProd.push(linea("Attesa PVGIS", g.map((x) => x.attesa), css("--grigio"), { dataset: { pointRadius: 0, pointHoverRadius: 5, order: -1 } }));
+                    barre("Immessa in rete", g.map((x) => x.immessa), css("--s4"), "p", true, "righe")];
+    if (conAttesa) dsProd.push(linea("Attesa PVGIS", g.map((x) => x.attesa), css("--grigio"), { dataset: { pointRadius: 0, pointHoverRadius: 5, order: -1, borderDash: [4, 4] } }));
     const optG = opzioni((v) => num(v, 0) + " kWh", { mirino: false });
     optG.scales.x.stacked = true; optG.scales.y.stacked = true;
     disegna("g-giorni", { data: { labels: etichetteG, datasets: dsProd }, options: optG });
@@ -378,8 +830,8 @@
     const optC = opzioni((v) => num(v, 0) + " kWh");
     optC.scales.x.stacked = true; optC.scales.y.stacked = true;
     disegna("g-consumo", { data: { labels: etichetteG, datasets: [
-      barre("Da fotovoltaico e batteria", g.map((x) => x.autosufficienza), css("--s1"), "c", false),
-      barre("Prelevata dalla rete", g.map((x) => x.prelevata), css("--s4"), "c", true) ] }, options: optC });
+      barre("Da fotovoltaico e batteria", g.map((x) => x.autosufficienza), css("--s2"), "c", false),
+      barre("Prelevata dalla rete", g.map((x) => x.prelevata), css("--s4"), "c", true, "righe") ] }, options: optC });
     tabella($("t-consumo"), ["Giorno", "Consumo", "Da FV e batteria", "Prelevata", "Autosufficienza"],
       g.slice().reverse().map((x) => [ggmm(x.data), kwh(x.consumata), kwh(x.autosufficienza), kwh(x.prelevata), pct(x.autosufficienza_pct)]));
 
@@ -397,7 +849,7 @@
     const b = d.batteria;
     const bb = svuota($("batt"));
     if (b) {
-      const voce = (e, v) => el("div", {}, el("div", { class: "etichetta", text: e }), el("div", { class: "valore", text: v }));
+      const voce = (et, v) => el("div", {}, el("div", { class: "etichetta", text: et }), el("div", { class: "valore", text: v }));
       const mis = el("div", { class: "misuratore" + ((b.soc != null && b.soc < 15) ? " bassa" : "") }, el("div", { style: `width:${Math.max(0, Math.min(100, b.soc || 0))}%` }));
       bb.append(el("div", { style: "grid-column: 1 / -1" }, el("div", { class: "etichetta", text: "Carica (SOC)" }),
         el("div", { class: "valore", text: `${num(b.soc, 0)} % · ${b.verso}${b.potenza_w ? " a " + kw(Math.abs(b.potenza_w)) : ""}` }), mis));
@@ -414,9 +866,10 @@
     const pi = svuota($("piede"));
     const i = d.attesa.info || {};
     pi.append(el("div", { text: d.attesa.configurata
-      ? `Produzione attesa: PVGIS v5.3 (JRC, Commissione Europea), strumento PVcalc, database ${i.database}, anni ${i.anni}; impianto ${num(i.kwp, 1)} kWp, inclinazione ${num(i.inclinazione, 0)}°${i.inclinazione_ottimizzata ? " (ottimizzata da PVGIS)" : ""}, orientamento ${num(i.orientamento, 0)}° (0 = sud), perdite ${num(i.perdite, 0)} %; media annua attesa ${kwh(i.annuale_kwh, 0)}; dati scaricati il ${i.scaricato}. L'attesa di un giorno è la media giornaliera del suo mese: una giornata nuvolosa sta sotto, una limpida sopra.`
+      ? `Produzione attesa: PVGIS v5.3 (JRC, Commissione Europea), strumento PVcalc, database ${i.database}, anni ${i.anni}; impianto ${num(i.kwp, 1)} kWp, inclinazione ${num(i.inclinazione, 0)}°${i.inclinazione_ottimizzata ? " (ottimizzata da PVGIS)" : ""}, orientamento ${num(i.orientamento, 0)}° (0 = sud), perdite ${num(i.perdite, 0)} %; media annua attesa ${kwh(i.annuale_kwh, 0)}; dati scaricati il ${i.scaricato}. L'attesa di un giorno è la media giornaliera del suo mese.`
       : "Produzione attesa: PVGIS non configurato (impostare PVGIS_LAT, PVGIS_LON, IMPIANTO_KWP e, se noti, PVGIS_INCLINAZIONE e PVGIS_ORIENTAMENTO nel file .env)." }));
-    pi.append(el("div", { text: "Convenzioni: i contatori giornalieri sono quelli dell'inverter (si azzerano a mezzanotte); autoconsumo = prodotta − immessa; autosufficienza = consumo − prelevata; batteria positiva = in carica; rete positiva = immissione, negativa = prelievo (segno verificato il 20/10/2026 con il bilancio delle potenze). Dati letti in sola lettura da dati.db (una riga al minuto)." }));
+    pi.append(el("div", { text: "Convenzioni: i contatori giornalieri sono quelli dell'inverter (si azzerano a mezzanotte); autoconsumo = prodotta − immessa; autosufficienza = consumo − prelevata; batteria positiva = in carica; rete positiva = immissione, negativa = prelievo. Dati letti in sola lettura da dati.db (una riga al minuto)." }));
+    pi.append(el("div", { text: "Viste: ?tv=1 per TV o tablet · ?widget=eroe|flusso|kpi|potenza|giorni|consumo|mesi|batteria per un solo pannello (aggiungi &sfondo=trasparente per incorporarlo) · ?tema=dark|light per forzare il tema in quella vista." }));
   }
 
   // ---------- caricamento ----------
@@ -431,7 +884,7 @@
       const vecchio = document.querySelector(".errore"); if (vecchio) vecchio.remove();
     } catch (e) {
       let box = document.querySelector(".errore");
-      if (!box) { box = el("div", { class: "errore", role: "alert" }); $("avvisi").before(box); }
+      if (!box) { box = el("div", { class: "pannello errore", role: "alert" }); $("avvisi").before(box); }
       box.textContent = "Errore nel caricare i dati: " + e.message;
     } finally {
       document.body.classList.remove("aggiornando");
@@ -439,8 +892,6 @@
   }
   carica();
   stato.timer = setInterval(carica, 60 * 1000);
-  const schema = window.matchMedia("(prefers-color-scheme: dark)");
-  if (schema.addEventListener) schema.addEventListener("change", () => { if (stato.dati) render(stato.dati); });
 })();
 </script>
 </body>
